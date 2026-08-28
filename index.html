@@ -23,12 +23,13 @@
     .badge-ok { background-color: #27ae60; }
     .badge-alert { background-color: #f39c12; }
     .badge-danger { background-color: #e74c3c; }
+    .badge-info { background-color: #2980b9; }
   </style>
 </head>
 <body>
 
 <div class="container">
-  <h1>Painel de Controle: Logística, Frota & Manutenção</h1>
+  <h1>Painel de Controle: Logística, Frota & Financeiro</h1>
 
   <!-- 1. GESTÃO FINANCEIRA E COMPRAS -->
   <div class="card">
@@ -77,9 +78,9 @@
     </table>
   </div>
 
-  <!-- 2. GESTÃO DE FROTA E SAÍDAS -->
+  <!-- 2. GESTÃO DE FROTA, DIAS EM ROTA E CONTAGEM DE CARGAS -->
   <div class="card">
-    <h2>2. Saída de Veículos para Entregas</h2>
+    <h2>2. Saída de Veículos & Registro de Cargas</h2>
     <form id="frotaForm">
       <div class="form-grid">
         <div class="form-group">
@@ -88,19 +89,23 @@
         </div>
         <div class="form-group">
           <label>Motorista</label>
-          <input type="text" id="motorista" required>
+          <input type="text" id="motorista" placeholder="Ex: João Silva" required>
         </div>
         <div class="form-group">
           <label>Data de Saída</label>
           <input type="date" id="dataSaida" required>
         </div>
+        <div class="form-group">
+          <label>Cargas Entregues nesta Saída</label>
+          <input type="number" id="qtdCargas" value="1" min="1" required>
+        </div>
       </div>
-      <button type="button" onclick="addFrota()">Registrar Saída</button>
+      <button type="button" onclick="addFrota()">Registrar Saída/Viagem</button>
     </form>
   </div>
 
   <div class="card">
-    <h2>Status da Frota em Campo</h2>
+    <h2>Status da Frota em Campo e Dias em Rota</h2>
     <table>
       <thead>
         <tr>
@@ -108,15 +113,33 @@
           <th>Motorista</th>
           <th>Data de Saída</th>
           <th>Dias em Rota</th>
+          <th>Cargas nesta Viagem</th>
         </tr>
       </thead>
       <tbody id="tbFrota"></tbody>
     </table>
   </div>
 
-  <!-- 3. MANUTENÇÃO PREVENTIVA -->
+  <!-- NOVO MÓDULO: TOTAL DE CARGAS DO MOTORISTA NO MÊS -->
   <div class="card">
-    <h2>3. Manutenção Preventiva por KM</h2>
+    <h2>3. Desempenho Mensal dos Motoristas (Período de 30 dias)</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Motorista</th>
+          <th>Total de Cargas no Mês</th>
+          <th>Status de Produtividade</th>
+        </tr>
+      </thead>
+      <tbody id="tbMotoristasMensal">
+        <tr><td colspan="3" style="text-align:center; color:#777;">Nenhum registro de viagem lançado ainda.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 4. MANUTENÇÃO PREVENTIVA -->
+  <div class="card">
+    <h2>4. Manutenção Preventiva por KM</h2>
     <form id="manutencaoForm">
       <div class="form-grid">
         <div class="form-group">
@@ -166,6 +189,10 @@
 </div>
 
 <script>
+  // Objeto para acumular o total de cargas por motorista
+  const cargasPorMotorista = {};
+
+  // --- FINANCEIRO ---
   function getStatusBoleto(dataVencimentoStr) {
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
@@ -211,10 +238,12 @@
     document.getElementById('financeForm').reset();
   }
 
+  // --- FROTA E CARGAS POR MOTORISTA ---
   function addFrota() {
     const veiculo = document.getElementById('veiculo').value;
-    const motorista = document.getElementById('motorista').value;
+    const motorista = document.getElementById('motorista').value.trim();
     const dataSaida = document.getElementById('dataSaida').value;
+    const qtdCargas = parseInt(document.getElementById('qtdCargas').value) || 1;
 
     if (!veiculo || !motorista || !dataSaida) {
       alert('Preencha todas as informações da saída do veículo!');
@@ -227,18 +256,44 @@
     const diffTime = Math.abs(hoje - dtSaida);
     const diasEmRota = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
-    const tbody = document.getElementById('tbFrota');
+    // Lançamento na tabela de saídas da frota
+    const tbodyFrota = document.getElementById('tbFrota');
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${veiculo}</td>
       <td>${motorista}</td>
       <td>${dataSaida.split('-').reverse().join('/')}</td>
       <td><b>${diasEmRota}</b> dia(s) em rota</td>
+      <td><span class="badge badge-info">${qtdCargas} carga(s)</span></td>
     `;
-    tbody.appendChild(tr);
+    tbodyFrota.appendChild(tr);
+
+    // Atualiza contagem mensal do motorista
+    if (!cargasPorMotorista[motorista]) {
+      cargasPorMotorista[motorista] = 0;
+    }
+    cargasPorMotorista[motorista] += qtdCargas;
+
+    atualizarTabelaMotoristas();
     document.getElementById('frotaForm').reset();
   }
 
+  function atualizarTabelaMotoristas() {
+    const tbodyMensal = document.getElementById('tbMotoristasMensal');
+    tbodyMensal.innerHTML = '';
+
+    for (const [motorista, totalCargas] of Object.entries(cargasPorMotorista)) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><b>${motorista}</b></td>
+        <td><b>${totalCargas}</b> carga(s) entregues no mês</td>
+        <td><span class="badge badge-ok">Ativo no período</span></td>
+      `;
+      tbodyMensal.appendChild(tr);
+    }
+  }
+
+  // --- MANUTENÇÃO PREVENTIVA ---
   function addManutencao() {
     const veiculo = document.getElementById('mVeiculo').value;
     const servico = document.getElementById('mServico').value;
