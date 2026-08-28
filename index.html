@@ -114,7 +114,7 @@
     </table>
   </div>
 
-  <!-- 3. NOVO MÓDULO: MANUTENÇÃO PREVENTIVA -->
+  <!-- 3. MANUTENÇÃO PREVENTIVA -->
   <div class="card">
     <h2>3. Manutenção Preventiva por KM</h2>
     <form id="manutencaoForm">
@@ -166,7 +166,6 @@
 </div>
 
 <script>
-  // --- FINANCEIRO ---
   function getStatusBoleto(dataVencimentoStr) {
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
@@ -212,7 +211,6 @@
     document.getElementById('financeForm').reset();
   }
 
-  // --- FROTA ---
   function addFrota() {
     const veiculo = document.getElementById('veiculo').value;
     const motorista = document.getElementById('motorista').value;
@@ -241,7 +239,6 @@
     document.getElementById('frotaForm').reset();
   }
 
-  // --- MANUTENÇÃO PREVENTIVA ---
   function addManutencao() {
     const veiculo = document.getElementById('mVeiculo').value;
     const servico = document.getElementById('mServico').value;
