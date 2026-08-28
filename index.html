@@ -5,31 +5,37 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sistema de Gestão Logística, Financeira e Frota</title>
   <style>
-    * { box-sizing: border-box; font-family: Segoe UI, Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
+    * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
     body { background-color: #f4f6f9; padding: 20px; color: #333; }
-    h1, h2 { margin-bottom: 15px; color: #1a252f; }
+    h1, h2, h3 { margin-bottom: 15px; color: #1a252f; }
     .container { max-width: 1200px; margin: 0 auto; }
     .card { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 25px; }
     .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
     .form-group { display: flex; flex-direction: column; }
-    .form-group label { font-size: 14px; font-weight: bold; margin-bottom: 5px; }
-    .form-group input, .form-group select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+    .form-group label { font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #2c3e50; }
+    .form-group input, .form-group select, .form-group textarea { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
     button { background: #27ae60; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; margin-top: 15px; font-weight: bold; }
     button:hover { background: #219150; }
+    .btn-blue { background: #2980b9; }
+    .btn-blue:hover { background: #1f618d; }
     table { width: 100%; border-collapse: collapse; margin-top: 10px; background: #fff; }
-    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; font-size: 14px; }
+    th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #ddd; font-size: 13px; }
     th { background-color: #2c3e50; color: white; }
-    .badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; color: white; }
+    .badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; color: white; display: inline-block; }
     .badge-ok { background-color: #27ae60; }
     .badge-alert { background-color: #f39c12; }
     .badge-danger { background-color: #e74c3c; }
     .badge-info { background-color: #2980b9; }
+    .summary-box { display: flex; gap: 15px; margin-top: 15px; }
+    .kpi-card { flex: 1; background: #ecf0f1; padding: 15px; border-radius: 6px; border-left: 5px solid #2980b9; }
+    .kpi-card h4 { font-size: 12px; text-transform: uppercase; color: #7f8c8d; }
+    .kpi-card p { font-size: 20px; font-weight: bold; color: #2c3e50; margin-top: 5px; }
   </style>
 </head>
 <body>
 
 <div class="container">
-  <h1>Painel de Controle: Logística, Frota & Financeiro</h1>
+  <h1>Painel Integrado: Frota, Manutenção e Financeiro</h1>
 
   <!-- 1. GESTÃO FINANCEIRA E COMPRAS -->
   <div class="card">
@@ -78,7 +84,7 @@
     </table>
   </div>
 
-  <!-- 2. GESTÃO DE FROTA, DIAS EM ROTA E CONTAGEM DE CARGAS -->
+  <!-- 2. GESTÃO DE FROTA E CARGAS -->
   <div class="card">
     <h2>2. Saída de Veículos & Registro de Cargas</h2>
     <form id="frotaForm">
@@ -120,7 +126,6 @@
     </table>
   </div>
 
-  <!-- NOVO MÓDULO: TOTAL DE CARGAS DO MOTORISTA NO MÊS -->
   <div class="card">
     <h2>3. Desempenho Mensal dos Motoristas (Período de 30 dias)</h2>
     <table>
@@ -137,9 +142,9 @@
     </table>
   </div>
 
-  <!-- 4. MANUTENÇÃO PREVENTIVA -->
+  <!-- 4. REGISTRO COMPLETO DE MANUTENÇÕES E CUSTOS DA FROTA -->
   <div class="card">
-    <h2>4. Manutenção Preventiva por KM</h2>
+    <h2>4. Registro de Manutenção Realizada & Itens Substituídos</h2>
     <form id="manutencaoForm">
       <div class="form-grid">
         <div class="form-group">
@@ -147,50 +152,94 @@
           <input type="text" id="mVeiculo" placeholder="Ex: VW Delivery (ABC-1234)" required>
         </div>
         <div class="form-group">
-          <label>Tipo de Serviço</label>
+          <label>Data da Realização</label>
+          <input type="date" id="mDataRealizada" required>
+        </div>
+        <div class="form-group">
+          <label>Tipo de Serviço / Categoria</label>
           <select id="mServico">
             <option value="Troca de Óleo e Filtros">Troca de Óleo e Filtros</option>
-            <option value="Revisão de Freios">Revisão de Freios</option>
-            <option value="Rodízio/Troca de Pneus">Rodízio/Troca de Pneus</option>
-            <option value="Correia Dentada">Correia Dentada</option>
-            <option value="Revisão Geral">Revisão Geral</option>
+            <option value="Sistema de Freios">Sistema de Freios (Pastilhas/Discos)</option>
+            <option value="Pneus e Alinhamento">Pneus, Rodízio e Alinhamento</option>
+            <option value="Correias e Motores">Correia Dentada / Tensores</option>
+            <option value="Suspensão e Amortecedores">Suspensão e Amortecedores</option>
+            <option value="Elétrica e Bateria">Elétrica / Bateria / Alternador</option>
+            <option value="Revisão Geral">Revisão Geral Preventiva</option>
           </select>
         </div>
         <div class="form-group">
-          <label>KM Atual</label>
+          <label>Itens Substituídos / Peças Trocadas</label>
+          <input type="text" id="mPeças" placeholder="Ex: Filtro de óleo, 5L 15W40, Pastilha dianteira" required>
+        </div>
+        <div class="form-group">
+          <label>Custo Total (R$)</label>
+          <input type="number" step="0.01" id="mCusto" placeholder="Ex: 850.00" required>
+        </div>
+        <div class="form-group">
+          <label>KM no Momento da Troca</label>
           <input type="number" id="mKmAtual" placeholder="Ex: 120000" required>
         </div>
         <div class="form-group">
-          <label>KM Prevista p/ Próxima Troca</label>
+          <label>KM Prevista p/ Próxima Revisão</label>
           <input type="number" id="mKmProxima" placeholder="Ex: 130000" required>
         </div>
+        <div class="form-group">
+          <label>Data Prevista p/ Próxima Revisão</label>
+          <input type="date" id="mDataProxima" required>
+        </div>
       </div>
-      <button type="button" onclick="addManutencao()">Registrar Manutenção</button>
+      <button type="button" onclick="addManutencao()">Registrar Manutenção & Custo</button>
     </form>
   </div>
 
+  <!-- DASHBOARD DE CUSTOS E RESUMO -->
   <div class="card">
-    <h2>Controle de Manutenções Preventivas</h2>
+    <h2>Rastreabilidade de Custos & Indicadores da Frota</h2>
+    <div class="summary-box">
+      <div class="kpi-card">
+        <h4>Gasto Total em Manutenções</h4>
+        <p id="kpiCustoTotal">R$ 0,00</p>
+      </div>
+      <div class="kpi-card">
+        <h4>Total de Intervenções</h4>
+        <p id="kpiQtdManutencoes">0 registradas</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. CRONOGRAMA, RECORRÊNCIAS E PLANEJAMENTO FUTURO -->
+  <div class="card">
+    <h2>5. Cronograma de Revisões e Planejamento Futuro</h2>
+    <div style="margin-bottom: 15px;">
+      <label><b>Filtrar Histórico por Veículo:</b></label>
+      <select id="filtroVeiculo" onchange="filtrarHistorico()" style="padding: 6px; margin-left: 10px; border-radius: 4px;">
+        <option value="TODOS">Exibir Todos os Veículos</option>
+      </select>
+    </div>
     <table>
       <thead>
         <tr>
           <th>Veículo</th>
-          <th>Serviço</th>
-          <th>KM Atual</th>
-          <th>KM Próxima Revisão</th>
-          <th>KM Restantes</th>
-          <th>Status</th>
+          <th>Serviço / Itens Substituídos</th>
+          <th>Custo (R$)</th>
+          <th>Realizado Em</th>
+          <th>KM Na Troca</th>
+          <th>Próxima Revisão (KM / Data)</th>
+          <th>Status do Planejamento</th>
         </tr>
       </thead>
-      <tbody id="tbManutencao"></tbody>
+      <tbody id="tbManutencao">
+        <tr><td colspan="7" style="text-align:center; color:#777;">Nenhuma manutenção registrada ainda.</td></tr>
+      </tbody>
     </table>
   </div>
 
 </div>
 
 <script>
-  // Objeto para acumular o total de cargas por motorista
+  // Banco de Dados Local
   const cargasPorMotorista = {};
+  const historicoManutencoes = [];
 
   // --- FINANCEIRO ---
   function getStatusBoleto(dataVencimentoStr) {
@@ -256,7 +305,6 @@
     const diffTime = Math.abs(hoje - dtSaida);
     const diasEmRota = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
-    // Lançamento na tabela de saídas da frota
     const tbodyFrota = document.getElementById('tbFrota');
     const tr = document.createElement('tr');
     tr.innerHTML = `
@@ -268,7 +316,6 @@
     `;
     tbodyFrota.appendChild(tr);
 
-    // Atualiza contagem mensal do motorista
     if (!cargasPorMotorista[motorista]) {
       cargasPorMotorista[motorista] = 0;
     }
@@ -293,41 +340,109 @@
     }
   }
 
-  // --- MANUTENÇÃO PREVENTIVA ---
+  // --- MANUTENÇÃO, RASTREABILIDADE DE CUSTOS E CRONOGRAMA ---
   function addManutencao() {
-    const veiculo = document.getElementById('mVeiculo').value;
+    const veiculo = document.getElementById('mVeiculo').value.trim();
+    const dataRealizada = document.getElementById('mDataRealizada').value;
     const servico = document.getElementById('mServico').value;
+    const peças = document.getElementById('mPeças').value;
+    const custo = parseFloat(document.getElementById('mCusto').value) || 0;
     const kmAtual = parseInt(document.getElementById('mKmAtual').value);
     const kmProxima = parseInt(document.getElementById('mKmProxima').value);
+    const dataProxima = document.getElementById('mDataProxima').value;
 
-    if (!veiculo || isNaN(kmAtual) || isNaN(kmProxima)) {
-      alert('Preencha o veículo, KM atual e KM da próxima revisão!');
+    if (!veiculo || !dataRealizada || !peças || isNaN(kmAtual) || isNaN(kmProxima) || !dataProxima) {
+      alert('Preencha todas as informações da manutenção!');
       return;
     }
 
-    const kmRestante = kmProxima - kmAtual;
-    let statusBadge = '';
+    const registro = {
+      veiculo,
+      dataRealizada,
+      servico,
+      peças,
+      custo,
+      kmAtual,
+      kmProxima,
+      dataProxima
+    };
 
-    if (kmRestante < 0) {
-      statusBadge = `<span class="badge badge-danger">MANUTENÇÃO VENCIDA (${Math.abs(kmRestante).toLocaleString('pt-BR')} km passados)</span>`;
-    } else if (kmRestante <= 1000) {
-      statusBadge = `<span class="badge badge-alert">ATENÇÃO (${kmRestante.toLocaleString('pt-BR')} km restantes)</span>`;
+    historicoManutencoes.push(registro);
+    atualizarFiltroVeiculos();
+    exibirHistoricoManutencao();
+    atualizarKPIs();
+    document.getElementById('manutencaoForm').reset();
+  }
+
+  function atualizarFiltroVeiculos() {
+    const select = document.getElementById('filtroVeiculo');
+    const valorAtual = select.value;
+    const veiculosUnicos = [...new Set(historicoManutencoes.map(item => item.veiculo))];
+    
+    select.innerHTML = '<option value="TODOS">Exibir Todos os Veículos</option>';
+    veiculosUnicos.forEach(v => {
+      const opt = document.createElement('option');
+      opt.value = v;
+      opt.textContent = v;
+      select.appendChild(opt);
+    });
+    select.value = valorAtual;
+  }
+
+  function calcularStatusRevisao(item) {
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    const dtProx = new Date(item.dataProxima + 'T00:00:00');
+    
+    const diffTime = dtProx - hoje;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) {
+      return `<span class="badge badge-danger">REVISÃO VENCIDA (${Math.abs(diffDays)} dias)</span>`;
+    } else if (diffDays <= 7) {
+      return `<span class="badge badge-alert">PRÓXIMA (em ${diffDays} dias)</span>`;
     } else {
-      statusBadge = `<span class="badge badge-ok">OK (${kmRestante.toLocaleString('pt-BR')} km restantes)</span>`;
+      return `<span class="badge badge-ok">PLANO EM DIA</span>`;
+    }
+  }
+
+  function exibirHistoricoManutencao() {
+    const tbody = document.getElementById('tbManutencao');
+    const filtro = document.getElementById('filtroVeiculo').value;
+    tbody.innerHTML = '';
+
+    const registrosFiltrados = filtro === 'TODOS' 
+      ? historicoManutencoes 
+      : historicoManutencoes.filter(item => item.veiculo === filtro);
+
+    if (registrosFiltrados.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#777;">Nenhuma manutenção encontrada para este filtro.</td></tr>';
+      return;
     }
 
-    const tbody = document.getElementById('tbManutencao');
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${veiculo}</td>
-      <td>${servico}</td>
-      <td>${kmAtual.toLocaleString('pt-BR')} KM</td>
-      <td>${kmProxima.toLocaleString('pt-BR')} KM</td>
-      <td>${kmRestante.toLocaleString('pt-BR')} KM</td>
-      <td>${statusBadge}</td>
-    `;
-    tbody.appendChild(tr);
-    document.getElementById('manutencaoForm').reset();
+    registrosFiltrados.reverse().forEach(item => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><b>${item.veiculo}</b></td>
+        <td><b>${item.servico}</b><br><small style="color:#555;">Trocados: ${item.peças}</small></td>
+        <td>R$ ${item.custo.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+        <td>${item.dataRealizada.split('-').reverse().join('/')}</td>
+        <td>${item.kmAtual.toLocaleString('pt-BR')} KM</td>
+        <td><b>${item.kmProxima.toLocaleString('pt-BR')} KM</b><br><small>${item.dataProxima.split('-').reverse().join('/')}</small></td>
+        <td>${calcularStatusRevisao(item)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function filtrarHistorico() {
+    exibirHistoricoManutencao();
+  }
+
+  function atualizarKPIs() {
+    const totalCusto = historicoManutencoes.reduce((acc, curr) => acc + curr.custo, 0);
+    document.getElementById('kpiCustoTotal').textContent = `R$ ${totalCusto.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+    document.getElementById('kpiQtdManutencoes').textContent = `${historicoManutencoes.length} registradas`;
   }
 </script>
 
