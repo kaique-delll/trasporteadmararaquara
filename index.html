@@ -3,7 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sistema de Gestão Logística, Financeira e Frota</title>
+  <title>Sistema de Gestão Logística, Financeira e Frota (Sincronizado)</title>
+  
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
   <style>
     * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
     body { background-color: #f4f6f9; padding: 20px; color: #333; }
@@ -16,8 +20,8 @@
     .form-group input, .form-group select, .form-group textarea { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
     button { background: #27ae60; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; margin-top: 15px; font-weight: bold; }
     button:hover { background: #219150; }
-    .btn-blue { background: #2980b9; }
-    .btn-blue:hover { background: #1f618d; }
+    .btn-danger { background: #e74c3c; margin-top: 0; padding: 4px 8px; font-size: 12px; }
+    .btn-danger:hover { background: #c0392b; }
     table { width: 100%; border-collapse: collapse; margin-top: 10px; background: #fff; }
     th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #ddd; font-size: 13px; }
     th { background-color: #2c3e50; color: white; }
@@ -30,14 +34,17 @@
     .kpi-card { flex: 1; background: #ecf0f1; padding: 15px; border-radius: 6px; border-left: 5px solid #2980b9; }
     .kpi-card h4 { font-size: 12px; text-transform: uppercase; color: #7f8c8d; }
     .kpi-card p { font-size: 20px; font-weight: bold; color: #2c3e50; margin-top: 5px; }
+    .sync-status { display: inline-block; padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-left: 15px; background: #27ae60; color: white; }
   </style>
 </head>
 <body>
 
 <div class="container">
-  <h1>Painel Integrado: Frota, Manutenção e Financeiro</h1>
+  <h1>
+    Painel Integrado: Frota, Manutenção e Financeiro 
+    <span class="sync-status">🟢 Nuvem Sincronizada</span>
+  </h1>
 
-  <!-- 1. GESTÃO FINANCEIRA E COMPRAS -->
   <div class="card">
     <h2>1. Cadastro de Pedido / Nota Fiscal</h2>
     <form id="financeForm">
@@ -61,16 +68,8 @@
           <label>Vencimento do Boleto</label>
           <input type="date" id="vencBoleto">
         </div>
-        <div class="form-group">
-          <label>Nota Fiscal (Arquivo)</label>
-          <input type="file" id="fileNF">
-        </div>
-        <div class="form-group">
-          <label>Laudo / Comprovante (Arquivo)</label>
-          <input type="file" id="fileLaudo">
-        </div>
       </div>
-      <button type="button" onclick="addFinanceiro()">Cadastrar Nota / Pedido</button>
+      <button type="button" onclick="addFinanceiro()">Salvar na Nuvem</button>
     </form>
   </div>
 
@@ -84,17 +83,15 @@
           <th>Forma Pagamento</th>
           <th>Vencimento</th>
           <th>Status do Pagamento</th>
-          <th>Nota Fiscal</th>
-          <th>Comprovante / Laudo</th>
+          <th>Ações</th>
         </tr>
       </thead>
       <tbody id="tbFinanceiro">
-        <tr><td colspan="7" style="text-align:center; color:#777;">Nenhum lançamento financeiro registrado.</td></tr>
+        <tr><td colspan="6" style="text-align:center; color:#777;">Carregando dados da nuvem...</td></tr>
       </tbody>
     </table>
   </div>
 
-  <!-- 2. GESTÃO DE FROTA E CARGAS -->
   <div class="card">
     <h2>2. Saída de Veículos & Registro de Cargas</h2>
     <form id="frotaForm">
@@ -130,9 +127,12 @@
           <th>Data de Saída</th>
           <th>Dias em Rota</th>
           <th>Cargas nesta Viagem</th>
+          <th>Ações</th>
         </tr>
       </thead>
-      <tbody id="tbFrota"></tbody>
+      <tbody id="tbFrota">
+        <tr><td colspan="6" style="text-align:center; color:#777;">Carregando dados da nuvem...</td></tr>
+      </tbody>
     </table>
   </div>
 
@@ -147,12 +147,11 @@
         </tr>
       </thead>
       <tbody id="tbMotoristasMensal">
-        <tr><td colspan="3" style="text-align:center; color:#777;">Nenhum registro de viagem lançado ainda.</td></tr>
+        <tr><td colspan="3" style="text-align:center; color:#777;">Sem dados lançados.</td></tr>
       </tbody>
     </table>
   </div>
 
-  <!-- 4. REGISTRO COMPLETO DE MANUTENÇÕES E CUSTOS DA FROTA -->
   <div class="card">
     <h2>4. Registro de Manutenção Realizada & Itens Substituídos</h2>
     <form id="manutencaoForm">
@@ -179,7 +178,7 @@
         </div>
         <div class="form-group">
           <label>Itens Substituídos / Peças Trocadas</label>
-          <input type="text" id="mPeças" placeholder="Ex: Filtro de óleo, 5L 15W40, Pastilha dianteira" required>
+          <input type="text" id="mPeças" placeholder="Ex: Filtro de óleo, Pastilha dianteira" required>
         </div>
         <div class="form-group">
           <label>Custo Total (R$)</label>
@@ -202,7 +201,6 @@
     </form>
   </div>
 
-  <!-- DASHBOARD DE CUSTOS E RESUMO -->
   <div class="card">
     <h2>Rastreabilidade de Custos & Indicadores da Frota</h2>
     <div class="summary-box">
@@ -217,7 +215,6 @@
     </div>
   </div>
 
-  <!-- 5. CRONOGRAMA, RECORRÊNCIAS E PLANEJAMENTO FUTURO -->
   <div class="card">
     <h2>5. Cronograma de Revisões e Planejamento Futuro</h2>
     <div style="margin-bottom: 15px;">
@@ -230,16 +227,17 @@
       <thead>
         <tr>
           <th>Veículo</th>
-          <th>Serviço / Itens Substituídos</th>
+          <th>Serviço / Peças</th>
           <th>Custo (R$)</th>
           <th>Realizado Em</th>
           <th>KM Na Troca</th>
-          <th>Próxima Revisão (KM / Data)</th>
-          <th>Status do Planejamento</th>
+          <th>Próxima Revisão</th>
+          <th>Status</th>
+          <th>Ações</th>
         </tr>
       </thead>
       <tbody id="tbManutencao">
-        <tr><td colspan="7" style="text-align:center; color:#777;">Nenhuma manutenção registrada ainda.</td></tr>
+        <tr><td colspan="8" style="text-align:center; color:#777;">Carregando dados da nuvem...</td></tr>
       </tbody>
     </table>
   </div>
@@ -247,84 +245,87 @@
 </div>
 
 <script>
-  // Banco de Dados Local
-  const cargasPorMotorista = {};
-  const historicoManutencoes = [];
-  let financaContador = 0;
+  // CONFIGURAÇÃO REAL DO SEU FIREBASE EXTRAÍDA DA FOTO
+  const firebaseConfig = {
+    apiKey: "AIzaSyAzQX2ZUP-0wzs6yJkheQUHMyk_h0_uYAY",
+    authDomain: "trasporteadmararaquara.firebaseapp.com",
+    databaseURL: "https://trasporteadmararaquara-default-rtdb.firebaseio.com",
+    projectId: "trasporteadmararaquara",
+    storageBucket: "trasporteadmararaquara.firebasestorage.app",
+    messagingSenderId: "644293002833",
+    appId: "1:644293002833:web:3927684facb10ad477da70"
+  };
 
-  // Alterna visibilidade do vencimento conforme pagamento
+  // Inicializar Firebase
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  let arrayManutencoes = [];
+
   function toggleFormaPagamento() {
     const forma = document.getElementById('formaPagamento').value;
-    const groupVenc = document.getElementById('groupVencBoleto');
-    if (forma === 'PIX') {
-      groupVenc.style.display = 'none';
-    } else {
-      groupVenc.style.display = 'flex';
-    }
+    document.getElementById('groupVencBoleto').style.display = (forma === 'PIX') ? 'none' : 'flex';
   }
 
-  // --- FINANCEIRO ---
   function getStatusBoleto(dataVencimentoStr) {
     if (!dataVencimentoStr) return `<span class="badge badge-ok">PAGO (PIX)</span>`;
-    
     const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
+    hoje.setHours(0,0,0,0);
     const vencimento = new Date(dataVencimentoStr + 'T00:00:00');
-    
-    const diffTime = vencimento - hoje;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const diffDays = Math.ceil((vencimento - hoje) / (1000 * 60 * 60 * 24));
 
-    if (diffDays < 0) {
-      return `<span class="badge badge-danger">VENCIDO (${Math.abs(diffDays)} dias)</span>`;
-    } else if (diffDays === 0) {
-      return `<span class="badge badge-alert">VENCE HOJE</span>`;
-    } else if (diffDays <= 3) {
-      return `<span class="badge badge-alert">Vence em ${diffDays} dia(s)</span>`;
-    } else {
-      return `<span class="badge badge-ok">Em dia (${diffDays} dias restantes)</span>`;
-    }
+    if (diffDays < 0) return `<span class="badge badge-danger">VENCIDO (${Math.abs(diffDays)}d)</span>`;
+    if (diffDays === 0) return `<span class="badge badge-alert">VENCE HOJE</span>`;
+    if (diffDays <= 3) return `<span class="badge badge-alert">Vence em ${diffDays}d</span>`;
+    return `<span class="badge badge-ok">Em dia (${diffDays}d)</span>`;
   }
 
+  // --- 1. FINANCEIRO ---
   function addFinanceiro() {
     const numPedido = document.getElementById('numPedido').value;
     const dataEmissao = document.getElementById('dataEmissao').value;
     const formaPagamento = document.getElementById('formaPagamento').value;
     const vencBoleto = document.getElementById('vencBoleto').value;
-    const fileNF = document.getElementById('fileNF').files[0]?.name || 'Sem anexo';
-    const fileLaudo = document.getElementById('fileLaudo').files[0]?.name || 'Sem anexo';
 
     if (!numPedido || !dataEmissao) {
       alert('Preencha o Número do Pedido/NF e a Data de Emissão!');
       return;
     }
 
-    if (formaPagamento === 'Boleto' && !vencBoleto) {
-      alert('Para a opção Boleto Bancário, informe a data de Vencimento!');
-      return;
-    }
+    db.ref('financeiro').push({
+      numPedido, dataEmissao, formaPagamento, vencBoleto: vencBoleto || ''
+    });
 
-    const tbody = document.getElementById('tbFinanceiro');
-    if (financaContador === 0) {
-      tbody.innerHTML = '';
-    }
-    financaContador++;
-
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td><b>${numPedido}</b></td>
-      <td>${dataEmissao.split('-').reverse().join('/')}</td>
-      <td><span class="badge ${formaPagamento === 'PIX' ? 'badge-ok' : 'badge-info'}">${formaPagamento}</span></td>
-      <td>${vencBoleto ? vencBoleto.split('-').reverse().join('/') : 'N/A (À Vista)'}</td>
-      <td>${formaPagamento === 'PIX' ? '<span class="badge badge-ok">PAGO (À VISTA)</span>' : getStatusBoleto(vencBoleto)}</td>
-      <td>${fileNF}</td>
-      <td>${fileLaudo}</td>
-    `;
-    tbody.appendChild(tr);
     document.getElementById('financeForm').reset();
     toggleFormaPagamento();
   }
 
-  // --- FROTA E CARGAS POR MOTORISTA ---
+  db.ref('financeiro').on('value', snapshot => {
+    const tbody = document.getElementById('tbFinanceiro');
+    tbody.innerHTML = '';
+    const data = snapshot.val();
+
+    if (!data) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#777;">Nenhum lançamento financeiro registrado.</td></tr>';
+      return;
+    }
+
+    Object.keys(data).forEach(key => {
+      const item = data[key];
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><b>${item.numPedido}</b></td>
+        <td>${item.dataEmissao.split('-').reverse().join('/')}</td>
+        <td><span class="badge ${item.formaPagamento === 'PIX' ? 'badge-ok' : 'badge-info'}">${item.formaPagamento}</span></td>
+        <td>${item.vencBoleto ? item.vencBoleto.split('-').reverse().join('/') : 'N/A (À Vista)'}</td>
+        <td>${item.formaPagamento === 'PIX' ? '<span class="badge badge-ok">PAGO (À VISTA)</span>' : getStatusBoleto(item.vencBoleto)}</td>
+        <td><button class="btn-danger" onclick="removerItem('financeiro', '${key}')">Excluir</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  });
+
+  // --- 2. FROTA E MOTORISTAS ---
   function addFrota() {
     const veiculo = document.getElementById('veiculo').value;
     const motorista = document.getElementById('motorista').value.trim();
@@ -332,52 +333,62 @@
     const qtdCargas = parseInt(document.getElementById('qtdCargas').value) || 1;
 
     if (!veiculo || !motorista || !dataSaida) {
-      alert('Preencha todas as informações da saída do veículo!');
+      alert('Preencha todos os campos do veículo e saída!');
+      return;
+    }
+
+    db.ref('frota').push({ veiculo, motorista, dataSaida, qtdCargas });
+    document.getElementById('frotaForm').reset();
+  }
+
+  db.ref('frota').on('value', snapshot => {
+    const tbodyFrota = document.getElementById('tbFrota');
+    const tbodyMotoristas = document.getElementById('tbMotoristasMensal');
+    tbodyFrota.innerHTML = '';
+    tbodyMotoristas.innerHTML = '';
+
+    const data = snapshot.val();
+    if (!data) {
+      tbodyFrota.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#777;">Nenhum veículo em rota.</td></tr>';
+      tbodyMotoristas.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#777;">Sem registro de cargas.</td></tr>';
       return;
     }
 
     const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
-    const dtSaida = new Date(dataSaida + 'T00:00:00');
-    const diffTime = Math.abs(hoje - dtSaida);
-    const diasEmRota = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    hoje.setHours(0,0,0,0);
+    const cargasPorMotorista = {};
 
-    const tbodyFrota = document.getElementById('tbFrota');
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${veiculo}</td>
-      <td>${motorista}</td>
-      <td>${dataSaida.split('-').reverse().join('/')}</td>
-      <td><b>${diasEmRota}</b> dia(s) em rota</td>
-      <td><span class="badge badge-info">${qtdCargas} carga(s)</span></td>
-    `;
-    tbodyFrota.appendChild(tr);
+    Object.keys(data).forEach(key => {
+      const item = data[key];
+      const dtSaida = new Date(item.dataSaida + 'T00:00:00');
+      const diasEmRota = Math.floor(Math.abs(hoje - dtSaida) / (1000 * 60 * 60 * 24));
 
-    if (!cargasPorMotorista[motorista]) {
-      cargasPorMotorista[motorista] = 0;
-    }
-    cargasPorMotorista[motorista] += qtdCargas;
-
-    atualizarTabelaMotoristas();
-    document.getElementById('frotaForm').reset();
-  }
-
-  function atualizarTabelaMotoristas() {
-    const tbodyMensal = document.getElementById('tbMotoristasMensal');
-    tbodyMensal.innerHTML = '';
-
-    for (const [motorista, totalCargas] of Object.entries(cargasPorMotorista)) {
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td><b>${motorista}</b></td>
-        <td><b>${totalCargas}</b> carga(s) entregues no mês</td>
+        <td>${item.veiculo}</td>
+        <td>${item.motorista}</td>
+        <td>${item.dataSaida.split('-').reverse().join('/')}</td>
+        <td><b>${diasEmRota}</b> dia(s)</td>
+        <td><span class="badge badge-info">${item.qtdCargas} carga(s)</span></td>
+        <td><button class="btn-danger" onclick="removerItem('frota', '${key}')">Excluir</button></td>
+      `;
+      tbodyFrota.appendChild(tr);
+
+      cargasPorMotorista[item.motorista] = (cargasPorMotorista[item.motorista] || 0) + item.qtdCargas;
+    });
+
+    Object.entries(cargasPorMotorista).forEach(([mot, total]) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><b>${mot}</b></td>
+        <td><b>${total}</b> carga(s) no mês</td>
         <td><span class="badge badge-ok">Ativo no período</span></td>
       `;
-      tbodyMensal.appendChild(tr);
-    }
-  }
+      tbodyMotoristas.appendChild(tr);
+    });
+  });
 
-  // --- MANUTENÇÃO, RASTREABILIDADE DE CUSTOS E CRONOGRAMA ---
+  // --- 3. MANUTENÇÕES ---
   function addManutencao() {
     const veiculo = document.getElementById('mVeiculo').value.trim();
     const dataRealizada = document.getElementById('mDataRealizada').value;
@@ -393,28 +404,32 @@
       return;
     }
 
-    const registro = {
-      veiculo,
-      dataRealizada,
-      servico,
-      peças,
-      custo,
-      kmAtual,
-      kmProxima,
-      dataProxima
-    };
+    db.ref('manutencoes').push({
+      veiculo, dataRealizada, servico, peças, custo, kmAtual, kmProxima, dataProxima
+    });
 
-    historicoManutencoes.push(registro);
+    document.getElementById('manutencaoForm').reset();
+  }
+
+  db.ref('manutencoes').on('value', snapshot => {
+    arrayManutencoes = [];
+    const data = snapshot.val();
+
+    if (data) {
+      Object.keys(data).forEach(key => {
+        arrayManutencoes.push({ id: key, ...data[key] });
+      });
+    }
+
     atualizarFiltroVeiculos();
     exibirHistoricoManutencao();
     atualizarKPIs();
-    document.getElementById('manutencaoForm').reset();
-  }
+  });
 
   function atualizarFiltroVeiculos() {
     const select = document.getElementById('filtroVeiculo');
     const valorAtual = select.value;
-    const veiculosUnicos = [...new Set(historicoManutencoes.map(item => item.veiculo))];
+    const veiculosUnicos = [...new Set(arrayManutencoes.map(item => item.veiculo))];
     
     select.innerHTML = '<option value="TODOS">Exibir Todos os Veículos</option>';
     veiculosUnicos.forEach(v => {
@@ -430,17 +445,11 @@
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
     const dtProx = new Date(item.dataProxima + 'T00:00:00');
-    
-    const diffTime = dtProx - hoje;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const diffDays = Math.ceil((dtProx - hoje) / (1000 * 60 * 60 * 24));
 
-    if (diffDays < 0) {
-      return `<span class="badge badge-danger">REVISÃO VENCIDA (${Math.abs(diffDays)} dias)</span>`;
-    } else if (diffDays <= 7) {
-      return `<span class="badge badge-alert">PRÓXIMA (em ${diffDays} dias)</span>`;
-    } else {
-      return `<span class="badge badge-ok">PLANO EM DIA</span>`;
-    }
+    if (diffDays < 0) return `<span class="badge badge-danger">VENCIDA (${Math.abs(diffDays)}d)</span>`;
+    if (diffDays <= 7) return `<span class="badge badge-alert">PRÓXIMA (${diffDays}d)</span>`;
+    return `<span class="badge badge-ok">EM DIA</span>`;
   }
 
   function exibirHistoricoManutencao() {
@@ -448,25 +457,26 @@
     const filtro = document.getElementById('filtroVeiculo').value;
     tbody.innerHTML = '';
 
-    const registrosFiltrados = filtro === 'TODOS' 
-      ? historicoManutencoes 
-      : historicoManutencoes.filter(item => item.veiculo === filtro);
+    const filtrados = filtro === 'TODOS' 
+      ? arrayManutencoes 
+      : arrayManutencoes.filter(item => item.veiculo === filtro);
 
-    if (registrosFiltrados.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#777;">Nenhuma manutenção encontrada para este filtro.</td></tr>';
+    if (filtrados.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#777;">Nenhuma manutenção encontrada.</td></tr>';
       return;
     }
 
-    registrosFiltrados.slice().reverse().forEach(item => {
+    filtrados.slice().reverse().forEach(item => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td><b>${item.veiculo}</b></td>
-        <td><b>${item.servico}</b><br><small style="color:#555;">Trocados: ${item.peças}</small></td>
-        <td>R$ ${item.custo.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+        <td><b>${item.servico}</b><br><small style="color:#555;">${item.peças}</small></td>
+        <td>R$ ${Number(item.custo).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
         <td>${item.dataRealizada.split('-').reverse().join('/')}</td>
-        <td>${item.kmAtual.toLocaleString('pt-BR')} KM</td>
-        <td><b>${item.kmProxima.toLocaleString('pt-BR')} KM</b><br><small>${item.dataProxima.split('-').reverse().join('/')}</small></td>
+        <td>${Number(item.kmAtual).toLocaleString('pt-BR')} KM</td>
+        <td><b>${Number(item.kmProxima).toLocaleString('pt-BR')} KM</b><br><small>${item.dataProxima.split('-').reverse().join('/')}</small></td>
         <td>${calcularStatusRevisao(item)}</td>
+        <td><button class="btn-danger" onclick="removerItem('manutencoes', '${item.id}')">Excluir</button></td>
       `;
       tbody.appendChild(tr);
     });
@@ -477,9 +487,15 @@
   }
 
   function atualizarKPIs() {
-    const totalCusto = historicoManutencoes.reduce((acc, curr) => acc + curr.custo, 0);
+    const totalCusto = arrayManutencoes.reduce((acc, curr) => acc + Number(curr.custo || 0), 0);
     document.getElementById('kpiCustoTotal').textContent = `R$ ${totalCusto.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-    document.getElementById('kpiQtdManutencoes').textContent = `${historicoManutencoes.length} registradas`;
+    document.getElementById('kpiQtdManutencoes').textContent = `${arrayManutencoes.length} registradas`;
+  }
+
+  function removerItem(no, id) {
+    if (confirm('Deseja excluir este registro da nuvem?')) {
+      db.ref(`${no}/${id}`).remove();
+    }
   }
 </script>
 
