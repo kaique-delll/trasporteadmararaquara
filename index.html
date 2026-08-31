@@ -58,6 +58,10 @@
           <input type="date" id="dataEmissao" required>
         </div>
         <div class="form-group">
+          <label>Valor Total (R$)</label>
+          <input type="number" step="0.01" id="valorFinanceiro" placeholder="Ex: 1500.00" required>
+        </div>
+        <div class="form-group">
           <label>Forma de Pagamento</label>
           <select id="formaPagamento" onchange="toggleFormaPagamento()">
             <option value="Boleto">Boleto Bancário</option>
@@ -65,8 +69,8 @@
           </select>
         </div>
         <div class="form-group" id="groupVencBoleto">
-          <label>Vencimento do Boleto</label>
-          <input type="date" id="vencBoleto">
+          <label id="labelDataPagamento">Vencimento / Data do Pagamento</label>
+          <input type="date" id="vencBoleto" required>
         </div>
       </div>
       <button type="button" onclick="addFinanceiro()">Salvar na Nuvem</button>
@@ -80,14 +84,15 @@
         <tr>
           <th>Nº Pedido / NF</th>
           <th>Data Emissão</th>
+          <th>Valor (R$)</th>
           <th>Forma Pagamento</th>
-          <th>Vencimento</th>
+          <th>Vencimento / Data</th>
           <th>Status do Pagamento</th>
           <th>Ações</th>
         </tr>
       </thead>
       <tbody id="tbFinanceiro">
-        <tr><td colspan="6" style="text-align:center; color:#777;">Carregando dados da nuvem...</td></tr>
+        <tr><td colspan="7" style="text-align:center; color:#777;">Carregando dados da nuvem...</td></tr>
       </tbody>
     </table>
   </div>
@@ -245,7 +250,7 @@
 </div>
 
 <script>
-  // CONFIGURAÇÃO REAL DO SEU FIREBASE EXTRAÍDA DA FOTO
+  // CONFIGURAÇÃO DO SEU FIREBASE
   const firebaseConfig = {
     apiKey: "AIzaSyAzQX2ZUP-0wzs6yJkheQUHMyk_h0_uYAY",
     authDomain: "trasporteadmararaquara.firebaseapp.com",
@@ -264,11 +269,20 @@
 
   function toggleFormaPagamento() {
     const forma = document.getElementById('formaPagamento').value;
-    document.getElementById('groupVencBoleto').style.display = (forma === 'PIX') ? 'none' : 'flex';
+    const label = document.getElementById('labelDataPagamento');
+    if (forma === 'PIX') {
+      label.textContent = "Data do Pagamento (PIX)";
+    } else {
+      label.textContent = "Vencimento do Boleto";
+    }
   }
 
-  function getStatusBoleto(dataVencimentoStr) {
-    if (!dataVencimentoStr) return `<span class="badge badge-ok">PAGO (PIX)</span>`;
+  function getStatusBoleto(dataVencimentoStr, formaPagamento) {
+    if (formaPagamento === 'PIX') {
+      return `<span class="badge badge-ok">PAGO (PIX)</span>`;
+    }
+    if (!dataVencimentoStr) return `<span class="badge badge-info">Sem Vencimento</span>`;
+    
     const hoje = new Date();
     hoje.setHours(0,0,0,0);
     const vencimento = new Date(dataVencimentoStr + 'T00:00:00');
@@ -284,16 +298,17 @@
   function addFinanceiro() {
     const numPedido = document.getElementById('numPedido').value;
     const dataEmissao = document.getElementById('dataEmissao').value;
+    const valorFinanceiro = parseFloat(document.getElementById('valorFinanceiro').value) || 0;
     const formaPagamento = document.getElementById('formaPagamento').value;
     const vencBoleto = document.getElementById('vencBoleto').value;
 
-    if (!numPedido || !dataEmissao) {
-      alert('Preencha o Número do Pedido/NF e a Data de Emissão!');
+    if (!numPedido || !dataEmissao || !valorFinanceiro || !vencBoleto) {
+      alert('Preencha o Número do Pedido/NF, Data de Emissão, Valor e a Data de Vencimento/Pagamento!');
       return;
     }
 
     db.ref('financeiro').push({
-      numPedido, dataEmissao, formaPagamento, vencBoleto: vencBoleto || ''
+      numPedido, dataEmissao, valorFinanceiro, formaPagamento, vencBoleto
     });
 
     document.getElementById('financeForm').reset();
@@ -306,19 +321,21 @@
     const data = snapshot.val();
 
     if (!data) {
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#777;">Nenhum lançamento financeiro registrado.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#777;">Nenhum lançamento financeiro registrado.</td></tr>';
       return;
     }
 
     Object.keys(data).forEach(key => {
       const item = data[key];
+      const valorFormatado = item.valorFinanceiro ? Number(item.valorFinanceiro).toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '0,00';
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td><b>${item.numPedido}</b></td>
         <td>${item.dataEmissao.split('-').reverse().join('/')}</td>
+        <td>R$ ${valorFormatado}</td>
         <td><span class="badge ${item.formaPagamento === 'PIX' ? 'badge-ok' : 'badge-info'}">${item.formaPagamento}</span></td>
-        <td>${item.vencBoleto ? item.vencBoleto.split('-').reverse().join('/') : 'N/A (À Vista)'}</td>
-        <td>${item.formaPagamento === 'PIX' ? '<span class="badge badge-ok">PAGO (À VISTA)</span>' : getStatusBoleto(item.vencBoleto)}</td>
+        <td>${item.vencBoleto ? item.vencBoleto.split('-').reverse().join('/') : '-'}</td>
+        <td>${getStatusBoleto(item.vencBoleto, item.formaPagamento)}</td>
         <td><button class="btn-danger" onclick="removerItem('financeiro', '${key}')">Excluir</button></td>
       `;
       tbody.appendChild(tr);
