@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sistema de Gestão Logística, Financeira e Frota (Sincronizado)</title>
+  <title>Sistema de Gestão Logística, Financeira e Frota</title>
   
   <!-- Firebase SDKs (Compatibilidade para GitHub Pages) -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -23,8 +23,8 @@
     button:hover { background: #219150; }
     .btn-danger { background: #e74c3c; margin-top: 0; padding: 4px 8px; font-size: 12px; }
     .btn-danger:hover { background: #c0392b; }
-    .btn-success { background: #2980b9; margin-top: 0; padding: 4px 8px; font-size: 12px; margin-right: 5px; }
-    .btn-success:hover { background: #1f618d; }
+    .btn-toggle { background: #2980b9; margin-top: 0; padding: 4px 8px; font-size: 12px; margin-right: 5px; }
+    .btn-toggle:hover { background: #1f618d; }
     table { width: 100%; border-collapse: collapse; margin-top: 10px; background: #fff; }
     th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #ddd; font-size: 13px; }
     th { background-color: #2c3e50; color: white; }
@@ -37,7 +37,7 @@
     .kpi-card { flex: 1; min-width: 200px; background: #ecf0f1; padding: 15px; border-radius: 6px; border-left: 5px solid #2980b9; }
     .kpi-card h4 { font-size: 12px; text-transform: uppercase; color: #7f8c8d; }
     .kpi-card p { font-size: 20px; font-weight: bold; color: #2c3e50; margin-top: 5px; }
-    .kpi-warning { border-left-color: #e67e22; }
+    .kpi-warning { border-left-color: #e74c3c; }
     .kpi-success { border-left-color: #27ae60; }
     .sync-status { display: inline-block; padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-left: 15px; background: #27ae60; color: white; }
   </style>
@@ -46,32 +46,79 @@
 
 <div class="container">
   <h1>
-    Painel Integrado: Frota, Manutenção e Financeiro 
+    Painel Integrado: Frota, Manutenção e Financeiro
     <span class="sync-status">🟢 Nuvem Sincronizada</span>
   </h1>
 
-  <!-- PAINEL DE INDICADORES RÁPIDOS DA FROTA -->
+  <!-- INDICADORES DA FROTA -->
   <div class="card">
     <h2>📊 Status Geral da Frota</h2>
     <div class="summary-box">
-      <div class="kpi-card kpi-warning">
-        <h4>Veículos em Rota / Viagem</h4>
-        <p id="kpiVeiculosRota">0 em campo</p>
-      </div>
       <div class="kpi-card kpi-success">
-        <h4>Veículos Parados / Na Garagem</h4>
-        <p id="kpiVeiculosParados">0 na garagem</p>
+        <h4>Veículos Disponíveis</h4>
+        <p id="kpiDisponiveis">0 veículos</p>
+      </div>
+      <div class="kpi-card kpi-warning">
+        <h4>Veículos Indisponíveis</h4>
+        <p id="kpiIndisponiveis">0 veículos</p>
       </div>
       <div class="kpi-card">
-        <h4>Total de Veículos Cadastrados</h4>
+        <h4>Total na Frota</h4>
         <p id="kpiTotalFrota">0 veículos</p>
       </div>
     </div>
   </div>
 
-  <!-- 1. GESTÃO FINANCEIRA E COMPRAS -->
+  <!-- 1. CADASTRO DE VEÍCULOS E STATUS DE DISPONIBILIDADE -->
   <div class="card">
-    <h2>1. Cadastro de Pedido / Nota Fiscal</h2>
+    <h2>1. Cadastro e Controle de Frota (Disponibilidade)</h2>
+    <form id="cadastroVeiculoForm">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Modelo / Descrição do Veículo</label>
+          <input type="text" id="vModelo" placeholder="Ex: VW Delivery 9.170" required>
+        </div>
+        <div class="form-group">
+          <label>Placa do Veículo</label>
+          <input type="text" id="vPlaca" placeholder="Ex: ABC-1234" required>
+        </div>
+        <div class="form-group">
+          <label>Status Inicial</label>
+          <select id="vStatus">
+            <option value="Disponível">Disponível</option>
+            <option value="Indisponível">Indisponível</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Observação / Motivo (Opcional)</label>
+          <input type="text" id="vObs" placeholder="Ex: Em manutenção / Aguardando peça">
+        </div>
+      </div>
+      <button type="button" onclick="cadastrarVeiculo()">Cadastrar Veículo</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>Lista de Veículos da Frota</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Modelo</th>
+          <th>Placa</th>
+          <th>Status</th>
+          <th>Observação</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody id="tbVeiculosCadastrados">
+        <tr><td colspan="5" style="text-align:center; color:#777;">Carregando frota...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 2. GESTÃO FINANCEIRA E COMPRAS -->
+  <div class="card">
+    <h2>2. Cadastro de Pedido / Nota Fiscal</h2>
     <form id="financeForm">
       <div class="form-grid">
         <div class="form-group">
@@ -122,14 +169,16 @@
     </table>
   </div>
 
-  <!-- 2. GESTÃO DE FROTA E CARGAS -->
+  <!-- 3. GESTÃO DE SAÍDAS E CARGAS -->
   <div class="card">
-    <h2>2. Saída de Veículos & Registro de Cargas</h2>
+    <h2>3. Registro de Saídas / Viagens</h2>
     <form id="frotaForm">
       <div class="form-grid">
         <div class="form-group">
-          <label>Veículo / Placa</label>
-          <input type="text" id="veiculo" placeholder="Ex: VW Delivery (ABC-1234)" required>
+          <label>Veículo em Uso</label>
+          <select id="veiculoSelect">
+            <option value="">Selecione um veículo cadastrado...</option>
+          </select>
         </div>
         <div class="form-group">
           <label>Motorista</label>
@@ -140,51 +189,33 @@
           <input type="date" id="dataSaida" required>
         </div>
         <div class="form-group">
-          <label>Cargas Entregues nesta Saída</label>
+          <label>Cargas nesta Viagem</label>
           <input type="number" id="qtdCargas" value="1" min="1" required>
         </div>
       </div>
-      <button type="button" onclick="addFrota()">Registrar Saída/Viagem</button>
+      <button type="button" onclick="addViagem()">Registrar Saída</button>
     </form>
   </div>
 
   <div class="card">
-    <h2>Status da Frota em Campo e Dias em Rota</h2>
+    <h2>Histórico de Viagens e Cargas</h2>
     <table>
       <thead>
         <tr>
           <th>Veículo</th>
           <th>Motorista</th>
           <th>Data de Saída</th>
-          <th>Dias em Rota</th>
-          <th>Cargas nesta Viagem</th>
-          <th>Status</th>
+          <th>Cargas na Viagem</th>
           <th>Ações</th>
         </tr>
       </thead>
-      <tbody id="tbFrota">
-        <tr><td colspan="7" style="text-align:center; color:#777;">Carregando dados da nuvem...</td></tr>
+      <tbody id="tbViagens">
+        <tr><td colspan="5" style="text-align:center; color:#777;">Carregando histórico de viagens...</td></tr>
       </tbody>
     </table>
   </div>
 
-  <div class="card">
-    <h2>3. Desempenho Mensal dos Motoristas (Período de 30 dias)</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>Motorista</th>
-          <th>Total de Cargas no Mês</th>
-          <th>Status de Produtividade</th>
-        </tr>
-      </thead>
-      <tbody id="tbMotoristasMensal">
-        <tr><td colspan="3" style="text-align:center; color:#777;">Sem dados lançados.</td></tr>
-      </tbody>
-    </table>
-  </div>
-
-  <!-- 4. REGISTRO COMPLETO DE MANUTENÇÕES E CUSTOS DA FROTA -->
+  <!-- 4. MANUTENÇÕES E CUSTOS DA FROTA -->
   <div class="card">
     <h2>4. Registro de Manutenção Realizada & Itens Substituídos</h2>
     <form id="manutencaoForm">
@@ -235,28 +266,7 @@
   </div>
 
   <div class="card">
-    <h2>Rastreabilidade de Custos & Indicadores da Frota</h2>
-    <div class="summary-box">
-      <div class="kpi-card">
-        <h4>Gasto Total em Manutenções</h4>
-        <p id="kpiCustoTotal">R$ 0,00</p>
-      </div>
-      <div class="kpi-card">
-        <h4>Total de Intervenções</h4>
-        <p id="kpiQtdManutencoes">0 registradas</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- 5. CRONOGRAMA, RECORRÊNCIAS E PLANEJAMENTO FUTURO -->
-  <div class="card">
-    <h2>5. Cronograma de Revisões e Planejamento Futuro</h2>
-    <div style="margin-bottom: 15px;">
-      <label><b>Filtrar Histórico por Veículo:</b></label>
-      <select id="filtroVeiculo" onchange="filtrarHistorico()" style="padding: 6px; margin-left: 10px; border-radius: 4px;">
-        <option value="TODOS">Exibir Todos os Veículos</option>
-      </select>
-    </div>
+    <h2>Histórico de Manutenções</h2>
     <table>
       <thead>
         <tr>
@@ -271,7 +281,7 @@
         </tr>
       </thead>
       <tbody id="tbManutencao">
-        <tr><td colspan="8" style="text-align:center; color:#777;">Carregando dados da nuvem...</td></tr>
+        <tr><td colspan="8" style="text-align:center; color:#777;">Carregando histórico de manutenções...</td></tr>
       </tbody>
     </table>
   </div>
@@ -279,7 +289,7 @@
 </div>
 
 <script>
-  // CONFIGURAÇÃO DO SEU FIREBASE
+  // CONFIGURAÇÃO DO FIREBASE
   const firebaseConfig = {
     apiKey: "AIzaSyAzQX2ZUP-0wzs6yJkheQUHMyk_h0_uYAY",
     authDomain: "trasporteadmararaquara.firebaseapp.com",
@@ -293,16 +303,87 @@
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
 
-  let arrayManutencoes = [];
+  // --- 1. CADASTRO E CONTROLE DE VEÍCULOS ---
+  function cadastrarVeiculo() {
+    const modelo = document.getElementById('vModelo').value.trim();
+    const placa = document.getElementById('vPlaca').value.trim().toUpperCase();
+    const status = document.getElementById('vStatus').value;
+    const obs = document.getElementById('vObs').value.trim();
 
+    if (!modelo || !placa) {
+      alert('Preencha o Modelo e a Placa do veículo!');
+      return;
+    }
+
+    db.ref('veiculos_cadastrados').push({ modelo, placa, status, obs });
+    document.getElementById('cadastroVeiculoForm').reset();
+  }
+
+  function alternarStatusVeiculo(key, statusAtual) {
+    const novoStatus = statusAtual === 'Disponível' ? 'Indisponível' : 'Disponível';
+    db.ref(`veiculos_cadastrados/${key}`).update({ status: novoStatus });
+  }
+
+  db.ref('veiculos_cadastrados').on('value', snapshot => {
+    const tbody = document.getElementById('tbVeiculosCadastrados');
+    const selectVeiculo = document.getElementById('veiculoSelect');
+    tbody.innerHTML = '';
+    selectVeiculo.innerHTML = '<option value="">Selecione um veículo cadastrado...</option>';
+
+    const data = snapshot.val();
+    if (!data) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#777;">Nenhum veículo cadastrado.</td></tr>';
+      document.getElementById('kpiDisponiveis').textContent = '0 veículos';
+      document.getElementById('kpiIndisponiveis').textContent = '0 veículos';
+      document.getElementById('kpiTotalFrota').textContent = '0 veículos';
+      return;
+    }
+
+    let disp = 0;
+    let indisp = 0;
+    let total = 0;
+
+    Object.keys(data).forEach(key => {
+      const item = data[key];
+      total++;
+      if (item.status === 'Disponível') disp++;
+      else indisp++;
+
+      // Preenche tabela
+      const tr = document.createElement('tr');
+      const statusBadge = item.status === 'Disponível' 
+        ? '<span class="badge badge-ok">DISPONÍVEL</span>' 
+        : '<span class="badge badge-danger">INDISPONÍVEL</span>';
+
+      tr.innerHTML = `
+        <td><b>${item.modelo}</b></td>
+        <td><b>${item.placa}</b></td>
+        <td>${statusBadge}</td>
+        <td>${item.obs || '-'}</td>
+        <td>
+          <button class="btn-toggle" onclick="alternarStatusVeiculo('${key}', '${item.status}')">Mudar p/ ${item.status === 'Disponível' ? 'Indisponível' : 'Disponível'}</button>
+          <button class="btn-danger" onclick="removerItem('veiculos_cadastrados', '${key}')">Excluir</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+
+      // Popula o select do formulário de viagens
+      const opt = document.createElement('option');
+      opt.value = `${item.modelo} (${item.placa})`;
+      opt.textContent = `${item.modelo} (${item.placa}) - [${item.status}]`;
+      selectVeiculo.appendChild(opt);
+    });
+
+    document.getElementById('kpiDisponiveis').textContent = `${disp} disponível(is)`;
+    document.getElementById('kpiIndisponiveis').textContent = `${indisp} indisponível(is)`;
+    document.getElementById('kpiTotalFrota').textContent = `${total} veículo(s)`;
+  });
+
+  // --- 2. FINANCEIRO ---
   function toggleFormaPagamento() {
     const forma = document.getElementById('formaPagamento').value;
     const lbl = document.getElementById('lblDataPagamento');
-    if (forma === 'PIX') {
-      lbl.textContent = 'Data do Pagamento PIX';
-    } else {
-      lbl.textContent = 'Data Vencimento Boleto';
-    }
+    lbl.textContent = (forma === 'PIX') ? 'Data do Pagamento PIX' : 'Data Vencimento Boleto';
   }
 
   function getStatusPagamento(dataStr, forma) {
@@ -323,7 +404,6 @@
     return `<span class="badge badge-ok">Em dia (${diffDays}d)</span>`;
   }
 
-  // --- 1. FINANCEIRO ---
   function addFinanceiro() {
     const numPedido = document.getElementById('numPedido').value;
     const dataEmissao = document.getElementById('dataEmissao').value;
@@ -336,10 +416,7 @@
       return;
     }
 
-    db.ref('financeiro').push({
-      numPedido, dataEmissao, valorPagamento, formaPagamento, dataVencimento
-    });
-
+    db.ref('financeiro').push({ numPedido, dataEmissao, valorPagamento, formaPagamento, dataVencimento });
     document.getElementById('financeForm').reset();
     toggleFormaPagamento();
   }
@@ -370,103 +447,47 @@
     });
   });
 
-  // --- 2. FROTA E MOTORISTAS ---
-  function addFrota() {
-    const veiculo = document.getElementById('veiculo').value.trim();
+  // --- 3. VIAGENS / SAÍDAS ---
+  function addViagem() {
+    const veiculo = document.getElementById('veiculoSelect').value;
     const motorista = document.getElementById('motorista').value.trim();
     const dataSaida = document.getElementById('dataSaida').value;
     const qtdCargas = parseInt(document.getElementById('qtdCargas').value) || 1;
 
     if (!veiculo || !motorista || !dataSaida) {
-      alert('Preencha todos os campos do veículo e saída!');
+      alert('Selecione um veículo e preencha o motorista e a data de saída!');
       return;
     }
 
-    db.ref('frota').push({ veiculo, motorista, dataSaida, qtdCargas, emRota: true });
+    db.ref('viagens').push({ veiculo, motorista, dataSaida, qtdCargas });
     document.getElementById('frotaForm').reset();
   }
 
-  function finalizarViagem(key) {
-    if (confirm('Confirmar que este veículo retornou à garagem?')) {
-      db.ref(`frota/${key}`).update({ emRota: false });
-    }
-  }
-
-  db.ref('frota').on('value', snapshot => {
-    const tbodyFrota = document.getElementById('tbFrota');
-    const tbodyMotoristas = document.getElementById('tbMotoristasMensal');
-    tbodyFrota.innerHTML = '';
-    tbodyMotoristas.innerHTML = '';
-
+  db.ref('viagens').on('value', snapshot => {
+    const tbody = document.getElementById('tbViagens');
+    tbody.innerHTML = '';
     const data = snapshot.val();
+
     if (!data) {
-      tbodyFrota.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#777;">Nenhum veículo em rota.</td></tr>';
-      tbodyMotoristas.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#777;">Sem registro de cargas.</td></tr>';
-      document.getElementById('kpiVeiculosRota').textContent = '0 em campo';
-      document.getElementById('kpiVeiculosParados').textContent = '0 na garagem';
-      document.getElementById('kpiTotalFrota').textContent = '0 veículos';
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#777;">Nenhuma viagem registrada.</td></tr>';
       return;
     }
 
-    const hoje = new Date();
-    hoje.setHours(0,0,0,0);
-    const cargasPorMotorista = {};
-    const todosVeiculos = new Set();
-    let emRotaCount = 0;
-    let paradosCount = 0;
-
     Object.keys(data).forEach(key => {
       const item = data[key];
-      todosVeiculos.add(item.veiculo);
-
-      const isEmRota = item.emRota !== false;
-
-      if (isEmRota) {
-        emRotaCount++;
-        const dtSaida = new Date(item.dataSaida + 'T00:00:00');
-        const diasEmRota = Math.floor(Math.abs(hoje - dtSaida) / (1000 * 60 * 60 * 24));
-
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td><b>${item.veiculo}</b></td>
-          <td>${item.motorista}</td>
-          <td>${item.dataSaida.split('-').reverse().join('/')}</td>
-          <td><b>${diasEmRota}</b> dia(s)</td>
-          <td><span class="badge badge-info">${item.qtdCargas} carga(s)</span></td>
-          <td><span class="badge badge-alert">Em Viagem</span></td>
-          <td>
-            <button class="btn-success" onclick="finalizarViagem('${key}')">Chegou na Garagem</button>
-            <button class="btn-danger" onclick="removerItem('frota', '${key}')">Excluir</button>
-          </td>
-        `;
-        tbodyFrota.appendChild(tr);
-      } else {
-        paradosCount++;
-      }
-
-      cargasPorMotorista[item.motorista] = (cargasPorMotorista[item.motorista] || 0) + item.qtdCargas;
-    });
-
-    if (emRotaCount === 0) {
-      tbodyFrota.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#777;">Todos os veículos estão parados na garagem!</td></tr>';
-    }
-
-    document.getElementById('kpiVeiculosRota').textContent = `${emRotaCount} em campo`;
-    document.getElementById('kpiVeiculosParados').textContent = `${paradosCount} na garagem`;
-    document.getElementById('kpiTotalFrota').textContent = `${todosVeiculos.size} veículos cadastrados`;
-
-    Object.entries(cargasPorMotorista).forEach(([mot, total]) => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td><b>${mot}</b></td>
-        <td><b>${total}</b> carga(s) no mês</td>
-        <td><span class="badge badge-ok">Ativo no período</span></td>
+        <td><b>${item.veiculo}</b></td>
+        <td>${item.motorista}</td>
+        <td>${item.dataSaida.split('-').reverse().join('/')}</td>
+        <td><span class="badge badge-info">${item.qtdCargas} carga(s)</span></td>
+        <td><button class="btn-danger" onclick="removerItem('viagens', '${key}')">Excluir</button></td>
       `;
-      tbodyMotoristas.appendChild(tr);
+      tbody.appendChild(tr);
     });
   });
 
-  // --- 3. MANUTENÇÕES ---
+  // --- 4. MANUTENÇÃO ---
   function addManutencao() {
     const veiculo = document.getElementById('mVeiculo').value.trim();
     const dataRealizada = document.getElementById('mDataRealizada').value;
@@ -482,69 +503,22 @@
       return;
     }
 
-    db.ref('manutencoes').push({
-      veiculo, dataRealizada, servico, peças, custo, kmAtual, kmProxima, dataProxima
-    });
-
+    db.ref('manutencoes').push({ veiculo, dataRealizada, servico, peças, custo, kmAtual, kmProxima, dataProxima });
     document.getElementById('manutencaoForm').reset();
   }
 
   db.ref('manutencoes').on('value', snapshot => {
-    arrayManutencoes = [];
+    const tbody = document.getElementById('tbManutencao');
+    tbody.innerHTML = '';
     const data = snapshot.val();
 
-    if (data) {
-      Object.keys(data).forEach(key => {
-        arrayManutencoes.push({ id: key, ...data[key] });
-      });
-    }
-
-    atualizarFiltroVeiculos();
-    exibirHistoricoManutencao();
-    atualizarKPIs();
-  });
-
-  function atualizarFiltroVeiculos() {
-    const select = document.getElementById('filtroVeiculo');
-    const valorAtual = select.value;
-    const veiculosUnicos = [...new Set(arrayManutencoes.map(item => item.veiculo))];
-    
-    select.innerHTML = '<option value="TODOS">Exibir Todos os Veículos</option>';
-    veiculosUnicos.forEach(v => {
-      const opt = document.createElement('option');
-      opt.value = v;
-      opt.textContent = v;
-      select.appendChild(opt);
-    });
-    select.value = valorAtual;
-  }
-
-  function calcularStatusRevisao(item) {
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
-    const dtProx = new Date(item.dataProxima + 'T00:00:00');
-    const diffDays = Math.ceil((dtProx - hoje) / (1000 * 60 * 60 * 24));
-
-    if (diffDays < 0) return `<span class="badge badge-danger">VENCIDA (${Math.abs(diffDays)}d)</span>`;
-    if (diffDays <= 7) return `<span class="badge badge-alert">PRÓXIMA (${diffDays}d)</span>`;
-    return `<span class="badge badge-ok">EM DIA</span>`;
-  }
-
-  function exibirHistoricoManutencao() {
-    const tbody = document.getElementById('tbManutencao');
-    const filtro = document.getElementById('filtroVeiculo').value;
-    tbody.innerHTML = '';
-
-    const filtrados = filtro === 'TODOS' 
-      ? arrayManutencoes 
-      : arrayManutencoes.filter(item => item.veiculo === filtro);
-
-    if (filtrados.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#777;">Nenhuma manutenção encontrada.</td></tr>';
+    if (!data) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#777;">Nenhuma manutenção registrada.</td></tr>';
       return;
     }
 
-    filtrados.slice().reverse().forEach(item => {
+    Object.keys(data).forEach(key => {
+      const item = data[key];
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td><b>${item.veiculo}</b></td>
@@ -553,23 +527,14 @@
         <td>${item.dataRealizada.split('-').reverse().join('/')}</td>
         <td>${Number(item.kmAtual).toLocaleString('pt-BR')} KM</td>
         <td><b>${Number(item.kmProxima).toLocaleString('pt-BR')} KM</b><br><small>${item.dataProxima.split('-').reverse().join('/')}</small></td>
-        <td>${calcularStatusRevisao(item)}</td>
-        <td><button class="btn-danger" onclick="removerItem('manutencoes', '${item.id}')">Excluir</button></td>
+        <td><span class="badge badge-ok">REGISTRADO</span></td>
+        <td><button class="btn-danger" onclick="removerItem('manutencoes', '${key}')">Excluir</button></td>
       `;
       tbody.appendChild(tr);
     });
-  }
+  });
 
-  function filtrarHistorico() {
-    exibirHistoricoManutencao();
-  }
-
-  function atualizarKPIs() {
-    const totalCusto = arrayManutencoes.reduce((acc, curr) => acc + Number(curr.custo || 0), 0);
-    document.getElementById('kpiCustoTotal').textContent = `R$ ${totalCusto.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-    document.getElementById('kpiQtdManutencoes').textContent = `${arrayManutencoes.length} registradas`;
-  }
-
+  // --- FUNÇÃO DE EXCLUSÃO ---
   function removerItem(no, id) {
     if (confirm('Deseja excluir este registro da nuvem?')) {
       db.ref(`${no}/${id}`).remove();
