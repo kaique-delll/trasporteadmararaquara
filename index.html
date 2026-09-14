@@ -45,7 +45,6 @@
     .kpi-success { border-left-color: #27ae60; }
     .sync-status { display: inline-block; padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-left: 15px; background: #27ae60; color: white; }
     
-    /* ESTILO PARA CONTADOR DE MOTORISTAS */
     .driver-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-top: 10px; }
     .driver-card { background: #f8f9fa; border: 1px solid #e2e8f0; border-left: 4px solid #27ae60; padding: 10px 15px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
     .driver-name { font-weight: bold; color: #2c3e50; font-size: 14px; }
@@ -307,6 +306,112 @@
     </table>
   </div>
 
+  <!-- 5. ESTOQUE DE PEÇAS AUTOMOTIVAS -->
+  <div class="card">
+    <h2 id="titleEstoque">5. Controle de Estoque de Peças de Carros / Caminhões</h2>
+    <form id="estoqueForm">
+      <input type="hidden" id="editEstoqueKey">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Nome / Descrição da Peça</label>
+          <input type="text" id="pNome" placeholder="Ex: Pastilha de Freio Dianteira" required>
+        </div>
+        <div class="form-group">
+          <label>Código de Referência / Modelo</label>
+          <input type="text" id="pCodigo" placeholder="Ex: PF-1020 / Iveco Daily">
+        </div>
+        <div class="form-group">
+          <label>Quantidade Atual em Estoque</label>
+          <input type="number" id="pQtd" placeholder="Ex: 10" required>
+        </div>
+        <div class="form-group">
+          <label>Quantidade Mínima Alerta</label>
+          <input type="number" id="pQtdMin" placeholder="Ex: 2" required>
+        </div>
+        <div class="form-group">
+          <label>Local de Armazenamento / Prateleira</label>
+          <input type="text" id="pLocal" placeholder="Ex: Prateleira B2">
+        </div>
+      </div>
+      <button type="button" id="btnSalvarEstoque" onclick="addEstoque()">Salvar no Estoque</button>
+      <button type="button" id="btnCancelEstoque" class="btn-cancel" onclick="cancelarEdicaoEstoque()" style="display:none;">Cancelar Edição</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>Inventário de Peças em Estoque</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Peça</th>
+          <th>Código / Aplicação</th>
+          <th>Qtd. Estoque</th>
+          <th>Local</th>
+          <th>Status Estoque</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody id="tbEstoque">
+        <tr><td colspan="6" style="text-align:center; color:#777;">Carregando estoque de peças...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 6. CONTROLE DE RODÍZIO DE PNEUS E PASTILHAS DE FREIO -->
+  <div class="card">
+    <h2 id="titlePneusFreios">6. Plano de Rodízio de Pneus & Pastilhas de Freio (por KM e Data)</h2>
+    <form id="pneusFreiosForm">
+      <input type="hidden" id="editPneusKey">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Veículo / Caminhão</label>
+          <input type="text" id="pfVeiculo" placeholder="Ex: Iveco Daily (ABC-1234)" required>
+        </div>
+        <div class="form-group">
+          <label>Tipo de Item</label>
+          <select id="pfTipo">
+            <option value="Rodízio de Pneus">Rodízio de Pneus</option>
+            <option value="Pastilha de Freio">Pastilha de Freio</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Data da Troca / Rodízio</label>
+          <input type="date" id="pfData" required>
+        </div>
+        <div class="form-group">
+          <label>KM Atual na Troca / Rodízio</label>
+          <input type="number" id="pfKmAtual" placeholder="Ex: 100000" required>
+        </div>
+        <div class="form-group">
+          <label>KM Prevista Próximo Serviço</label>
+          <input type="number" id="pfKmProxima" placeholder="Ex: 110000" required>
+        </div>
+      </div>
+      <button type="button" id="btnSalvarPneus" onclick="addPneusFreios()">Registrar Rodízio / Pastilha</button>
+      <button type="button" id="btnCancelPneus" class="btn-cancel" onclick="cancelarEdicaoPneus()" style="display:none;">Cancelar Edição</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>Acompanhamento de Rodízio de Pneus e Pastilhas</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Veículo / Caminhão</th>
+          <th>Tipo</th>
+          <th>Data da Última Troca/Rodízio</th>
+          <th>KM Trocado</th>
+          <th>KM Próximo Rodízio/Troca</th>
+          <th>Status</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody id="tbPneusFreios">
+        <tr><td colspan="7" style="text-align:center; color:#777;">Carregando controle de pneus e freios...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
 </div>
 
 <script>
@@ -329,6 +434,8 @@
   let cacheFinanceiro = {};
   let cacheViagens = {};
   let cacheManutencoes = {};
+  let cacheEstoque = {};
+  let cachePneus = {};
 
   // --- 1. CADASTRO E CONTROLE DE VEÍCULOS ---
   function cadastrarVeiculo() {
@@ -588,7 +695,6 @@
     document.getElementById('btnCancelViagem').style.display = "none";
   }
 
-  // ATUALIZA TABELA E CONTADOR POR MOTORISTA
   db.ref('viagens').on('value', snapshot => {
     const tbody = document.getElementById('tbViagens');
     const driverSummary = document.getElementById('driverSummary');
@@ -610,7 +716,6 @@
     Object.keys(data).forEach(key => {
       const item = data[key];
 
-      // Computar saídas do motorista até o dia de hoje
       if (item.dataSaida <= hojeStr) {
         const nomeMot = item.motorista.trim();
         motoristaContagem[nomeMot] = (motoristaContagem[nomeMot] || 0) + 1;
@@ -629,7 +734,6 @@
       tbody.appendChild(tr);
     });
 
-    // Renderizar resumo de contagem por motorista
     const nomes = Object.keys(motoristaContagem);
     if (nomes.length === 0) {
       driverSummary.innerHTML = '<p style="color:#777;">Nenhuma saída realizada até a data de hoje.</p>';
@@ -727,6 +831,167 @@
         <td>
           <button class="btn-warning" onclick="editarManutencao('${key}')">Editar</button>
           <button class="btn-danger" onclick="removerItem('manutencoes', '${key}')">Excluir</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  });
+
+  // --- 5. ESTOQUE DE PEÇAS ---
+  function addEstoque() {
+    const key = document.getElementById('editEstoqueKey').value;
+    const nome = document.getElementById('pNome').value.trim();
+    const codigo = document.getElementById('pCodigo').value.trim();
+    const qtd = parseInt(document.getElementById('pQtd').value);
+    const qtdMin = parseInt(document.getElementById('pQtdMin').value);
+    const local = document.getElementById('pLocal').value.trim();
+
+    if (!nome || isNaN(qtd) || isNaN(qtdMin)) {
+      alert('Preencha o Nome da Peça, Quantidade Atual e Mínima!');
+      return;
+    }
+
+    const payload = { nome, codigo, qtd, qtdMin, local };
+
+    if (key) {
+      db.ref(`estoque_pecas/${key}`).update(payload);
+    } else {
+      db.ref('estoque_pecas').push(payload);
+    }
+    cancelarEdicaoEstoque();
+  }
+
+  function editarEstoque(key) {
+    const item = cacheEstoque[key];
+    if (!item) return;
+
+    document.getElementById('editEstoqueKey').value = key;
+    document.getElementById('pNome').value = item.nome || '';
+    document.getElementById('pCodigo').value = item.codigo || '';
+    document.getElementById('pQtd').value = item.qtd || 0;
+    document.getElementById('pQtdMin').value = item.qtdMin || 0;
+    document.getElementById('pLocal').value = item.local || '';
+
+    document.getElementById('titleEstoque').textContent = "5. Editar Peça no Estoque";
+    document.getElementById('btnSalvarEstoque').textContent = "Atualizar Peça";
+    document.getElementById('btnCancelEstoque').style.display = "inline-block";
+  }
+
+  function cancelarEdicaoEstoque() {
+    document.getElementById('editEstoqueKey').value = '';
+    document.getElementById('estoqueForm').reset();
+    document.getElementById('titleEstoque').textContent = "5. Controle de Estoque de Peças de Carros / Caminhões";
+    document.getElementById('btnSalvarEstoque').textContent = "Salvar no Estoque";
+    document.getElementById('btnCancelEstoque').style.display = "none";
+  }
+
+  db.ref('estoque_pecas').on('value', snapshot => {
+    const tbody = document.getElementById('tbEstoque');
+    tbody.innerHTML = '';
+    const data = snapshot.val();
+    cacheEstoque = data || {};
+
+    if (!data) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#777;">Nenhuma peça cadastrada no estoque.</td></tr>';
+      return;
+    }
+
+    Object.keys(data).forEach(key => {
+      const item = data[key];
+      const tr = document.createElement('tr');
+      const estaBaixo = item.qtd <= item.qtdMin;
+      const statusBadge = estaBaixo
+        ? `<span class="badge badge-danger">ESTOQUE BAIXO (${item.qtd})</span>`
+        : `<span class="badge badge-ok">DISPONÍVEL (${item.qtd})</span>`;
+
+      tr.innerHTML = `
+        <td><b>${item.nome}</b></td>
+        <td>${item.codigo || '-'}</td>
+        <td><b>${item.qtd} un.</b> (Mín: ${item.qtdMin})</td>
+        <td>${item.local || '-'}</td>
+        <td>${statusBadge}</td>
+        <td>
+          <button class="btn-warning" onclick="editarEstoque('${key}')">Editar</button>
+          <button class="btn-danger" onclick="removerItem('estoque_pecas', '${key}')">Excluir</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  });
+
+  // --- 6. CONTROLE DE PNEUS E FREIOS ---
+  function addPneusFreios() {
+    const key = document.getElementById('editPneusKey').value;
+    const veiculo = document.getElementById('pfVeiculo').value.trim();
+    const tipo = document.getElementById('pfTipo').value;
+    const dataServico = document.getElementById('pfData').value;
+    const kmAtual = parseInt(document.getElementById('pfKmAtual').value);
+    const kmProxima = parseInt(document.getElementById('pfKmProxima').value);
+
+    if (!veiculo || !dataServico || isNaN(kmAtual) || isNaN(kmProxima)) {
+      alert('Preencha todas as informações de Pneus/Freios!');
+      return;
+    }
+
+    const payload = { veiculo, tipo, dataServico, kmAtual, kmProxima };
+
+    if (key) {
+      db.ref(`pneus_freios/${key}`).update(payload);
+    } else {
+      db.ref('pneus_freios').push(payload);
+    }
+    cancelarEdicaoPneus();
+  }
+
+  function editarPneusFreios(key) {
+    const item = cachePneus[key];
+    if (!item) return;
+
+    document.getElementById('editPneusKey').value = key;
+    document.getElementById('pfVeiculo').value = item.veiculo || '';
+    document.getElementById('pfTipo').value = item.tipo || 'Rodízio de Pneus';
+    document.getElementById('pfData').value = item.dataServico || '';
+    document.getElementById('pfKmAtual').value = item.kmAtual || '';
+    document.getElementById('pfKmProxima').value = item.kmProxima || '';
+
+    document.getElementById('titlePneusFreios').textContent = "6. Editar Registro de Rodízio / Pastilha";
+    document.getElementById('btnSalvarPneus').textContent = "Atualizar Registro";
+    document.getElementById('btnCancelPneus').style.display = "inline-block";
+  }
+
+  function cancelarEdicaoPneus() {
+    document.getElementById('editPneusKey').value = '';
+    document.getElementById('pneusFreiosForm').reset();
+    document.getElementById('titlePneusFreios').textContent = "6. Plano de Rodízio de Pneus & Pastilhas de Freio (por KM e Data)";
+    document.getElementById('btnSalvarPneus').textContent = "Registrar Rodízio / Pastilha";
+    document.getElementById('btnCancelPneus').style.display = "none";
+  }
+
+  db.ref('pneus_freios').on('value', snapshot => {
+    const tbody = document.getElementById('tbPneusFreios');
+    tbody.innerHTML = '';
+    const data = snapshot.val();
+    cachePneus = data || {};
+
+    if (!data) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#777;">Nenhum rodízio ou troca de pastilha registrado.</td></tr>';
+      return;
+    }
+
+    Object.keys(data).forEach(key => {
+      const item = data[key];
+      const tr = document.createElement('tr');
+
+      tr.innerHTML = `
+        <td><b>${item.veiculo}</b></td>
+        <td><span class="badge ${item.tipo === 'Rodízio de Pneus' ? 'badge-info' : 'badge-alert'}">${item.tipo}</span></td>
+        <td>${item.dataServico.split('-').reverse().join('/')}</td>
+        <td>${Number(item.kmAtual).toLocaleString('pt-BR')} KM</td>
+        <td><b>${Number(item.kmProxima).toLocaleString('pt-BR')} KM</b></td>
+        <td><span class="badge badge-ok">ACOMPANHANDO</span></td>
+        <td>
+          <button class="btn-warning" onclick="editarPneusFreios('${key}')">Editar</button>
+          <button class="btn-danger" onclick="removerItem('pneus_freios', '${key}')">Excluir</button>
         </td>
       `;
       tbody.appendChild(tr);
