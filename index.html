@@ -177,29 +177,25 @@
     </table>
   </div>
 
-  <!-- 3. GESTÃO DE SAÍDAS E CARGAS -->
+  <!-- 3. GESTÃO DE SAÍDAS E CARGAS (SIMPLIFICADA) -->
   <div class="card">
-    <h2 id="titleViagem">3. Registro de Saídas / Viagens</h2>
+    <h2 id="titleViagem">3. Registro Rápido de Saídas / Viagens</h2>
     <form id="frotaForm">
       <input type="hidden" id="editViagemKey">
       <div class="form-grid">
         <div class="form-group">
-          <label>Veículo em Uso</label>
-          <select id="veiculoSelect">
+          <label>Selecione o Veículo / Placa</label>
+          <select id="veiculoSelect" required>
             <option value="">Selecione um veículo cadastrado...</option>
           </select>
         </div>
         <div class="form-group">
-          <label>Motorista</label>
+          <label>Motorista Responsável</label>
           <input type="text" id="motorista" placeholder="Ex: João Silva" required>
         </div>
         <div class="form-group">
           <label>Data de Saída</label>
           <input type="date" id="dataSaida" required>
-        </div>
-        <div class="form-group">
-          <label>Cargas nesta Viagem</label>
-          <input type="number" id="qtdCargas" value="1" min="1" required>
         </div>
       </div>
       <button type="button" id="btnSalvarViagem" onclick="addViagem()">Registrar Saída</button>
@@ -208,19 +204,18 @@
   </div>
 
   <div class="card">
-    <h2>Histórico de Viagens e Cargas</h2>
+    <h2>Histórico de Viagens e Saídas</h2>
     <table>
       <thead>
         <tr>
-          <th>Veículo</th>
+          <th>Veículo / Placa</th>
           <th>Motorista</th>
           <th>Data de Saída</th>
-          <th>Cargas na Viagem</th>
           <th>Ações</th>
         </tr>
       </thead>
       <tbody id="tbViagens">
-        <tr><td colspan="5" style="text-align:center; color:#777;">Carregando histórico de viagens...</td></tr>
+        <tr><td colspan="4" style="text-align:center; color:#777;">Carregando histórico de viagens...</td></tr>
       </tbody>
     </table>
   </div>
@@ -420,7 +415,7 @@
 
       const opt = document.createElement('option');
       opt.value = `${item.modelo} (${item.placa})`;
-      opt.textContent = `${item.modelo} (${item.placa}) - [${item.status}]`;
+      opt.textContent = `${item.modelo} - ${item.placa} [${item.status}]`;
       selectVeiculo.appendChild(opt);
     });
 
@@ -534,20 +529,19 @@
     });
   });
 
-  // --- 3. VIAGENS / SAÍDAS ---
+  // --- 3. VIAGENS / SAÍDAS (SIMPLIFICADA) ---
   function addViagem() {
     const key = document.getElementById('editViagemKey').value;
     const veiculo = document.getElementById('veiculoSelect').value;
     const motorista = document.getElementById('motorista').value.trim();
     const dataSaida = document.getElementById('dataSaida').value;
-    const qtdCargas = parseInt(document.getElementById('qtdCargas').value) || 1;
 
     if (!veiculo || !motorista || !dataSaida) {
-      alert('Selecione um veículo e preencha o motorista e a data de saída!');
+      alert('Selecione o veículo, preencha o motorista e informe a data de saída!');
       return;
     }
 
-    const payload = { veiculo, motorista, dataSaida, qtdCargas };
+    const payload = { veiculo, motorista, dataSaida };
 
     if (key) {
       db.ref(`viagens/${key}`).update(payload);
@@ -566,7 +560,6 @@
     document.getElementById('veiculoSelect').value = item.veiculo || '';
     document.getElementById('motorista').value = item.motorista || '';
     document.getElementById('dataSaida').value = item.dataSaida || '';
-    document.getElementById('qtdCargas').value = item.qtdCargas || 1;
 
     document.getElementById('titleViagem').textContent = "3. Editar Saída / Viagem";
     document.getElementById('btnSalvarViagem').textContent = "Atualizar Saída";
@@ -576,7 +569,7 @@
   function cancelarEdicaoViagem() {
     document.getElementById('editViagemKey').value = '';
     document.getElementById('frotaForm').reset();
-    document.getElementById('titleViagem').textContent = "3. Registro de Saídas / Viagens";
+    document.getElementById('titleViagem').textContent = "3. Registro Rápido de Saídas / Viagens";
     document.getElementById('btnSalvarViagem').textContent = "Registrar Saída";
     document.getElementById('btnCancelViagem').style.display = "none";
   }
@@ -588,7 +581,7 @@
     cacheViagens = data || {};
 
     if (!data) {
-      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#777;">Nenhuma viagem registrada.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#777;">Nenhuma viagem registrada.</td></tr>';
       return;
     }
 
@@ -599,7 +592,6 @@
         <td><b>${item.veiculo}</b></td>
         <td>${item.motorista}</td>
         <td>${item.dataSaida.split('-').reverse().join('/')}</td>
-        <td><span class="badge badge-info">${item.qtdCargas} carga(s)</span></td>
         <td>
           <button class="btn-warning" onclick="editarViagem('${key}')">Editar</button>
           <button class="btn-danger" onclick="removerItem('viagens', '${key}')">Excluir</button>
