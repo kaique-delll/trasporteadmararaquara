@@ -68,7 +68,7 @@
         <p id="kpiDisponiveis">0 veículos</p>
       </div>
       <div class="kpi-card kpi-warning">
-        <h4>Veículos Indisponíveis</h4>
+        <h4>Veículos Indisponíveis (Parados)</h4>
         <p id="kpiIndisponiveis">0 veículos</p>
       </div>
       <div class="kpi-card">
@@ -80,7 +80,7 @@
 
   <!-- 1. CADASTRO DE VEÍCULOS E STATUS DE DISPONIBILIDADE -->
   <div class="card">
-    <h2 id="titleVeiculo">1. Cadastro e Controle de Frota (Disponibilidade)</h2>
+    <h2 id="titleVeiculo">1. Cadastro e Controle de Frota (Disponibilidade & Dias Parado)</h2>
     <form id="cadastroVeiculoForm">
       <input type="hidden" id="editVeiculoKey">
       <div class="form-grid">
@@ -93,11 +93,15 @@
           <input type="text" id="vPlaca" placeholder="Ex: ABC-1234" required>
         </div>
         <div class="form-group">
-          <label>Status Inicial</label>
+          <label>Status Atual</label>
           <select id="vStatus">
             <option value="Disponível">Disponível</option>
-            <option value="Indisponível">Indisponível</option>
+            <option value="Indisponível">Indisponível (Parado)</option>
           </select>
+        </div>
+        <div class="form-group">
+          <label>Data de Início do Status</label>
+          <input type="date" id="vDataStatus">
         </div>
         <div class="form-group">
           <label>Observação / Motivo (Opcional)</label>
@@ -117,12 +121,15 @@
           <th>Modelo</th>
           <th>Placa</th>
           <th>Status</th>
+          <th>Desde</th>
+          <th>Dias Parado</th>
+          <th>Dias Disponível</th>
           <th>Observação</th>
           <th>Ações</th>
         </tr>
       </thead>
       <tbody id="tbVeiculosCadastrados">
-        <tr><td colspan="5" style="text-align:center; color:#777;">Carregando frota...</td></tr>
+        <tr><td colspan="8" style="text-align:center; color:#777;">Carregando frota...</td></tr>
       </tbody>
     </table>
   </div>
@@ -437,12 +444,24 @@
   let cacheEstoque = {};
   let cachePneus = {};
 
+  // Função auxiliar para calcular diferença em dias
+  function calcularDiasDiferenca(dataStr) {
+    if (!dataStr) return 0;
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    const dt = new Date(dataStr + 'T00:00:00');
+    const diffTime = hoje - dt;
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays < 0 ? 0 : diffDays;
+  }
+
   // --- 1. CADASTRO E CONTROLE DE VEÍCULOS ---
   function cadastrarVeiculo() {
     const key = document.getElementById('editVeiculoKey').value;
     const modelo = document.getElementById('vModelo').value.trim();
     const placa = document.getElementById('vPlaca').value.trim().toUpperCase();
     const status = document.getElementById('vStatus').value;
+    let dataStatus = document.getElementById('vDataStatus').value;
     const obs = document.getElementById('vObs').value.trim();
 
     if (!modelo || !placa) {
@@ -450,7 +469,12 @@
       return;
     }
 
-    const payload = { modelo, placa, status, obs };
+    // Se não informar data de status, define a data de hoje
+    if (!dataStatus) {
+      dataStatus = new Date().toISOString().split('T')[0];
+    }
+
+    const payload = { modelo, placa, status, dataStatus, obs };
 
     if (key) {
       db.ref(`veiculos_cadastrados/${key}`).update(payload);
@@ -468,6 +492,7 @@
     document.getElementById('vModelo').value = item.modelo || '';
     document.getElementById('vPlaca').value = item.placa || '';
     document.getElementById('vStatus').value = item.status || 'Disponível';
+    document.getElementById('vDataStatus').value = item.dataStatus || new Date().toISOString().split('T')[0];
     document.getElementById('vObs').value = item.obs || '';
 
     document.getElementById('titleVeiculo').textContent = "1. Editar Veículo";
@@ -479,14 +504,18 @@
   function cancelarEdicaoVeiculo() {
     document.getElementById('editVeiculoKey').value = '';
     document.getElementById('cadastroVeiculoForm').reset();
-    document.getElementById('titleVeiculo').textContent = "1. Cadastro e Controle de Frota (Disponibilidade)";
+    document.getElementById('titleVeiculo').textContent = "1. Cadastro e Controle de Frota (Disponibilidade & Dias Parado)";
     document.getElementById('btnSalvarVeiculo').textContent = "Cadastrar Veículo";
     document.getElementById('btnCancelVeiculo').style.display = "none";
   }
 
   function alternarStatusVeiculo(key, statusAtual) {
-    const novoStatus = statusAtual === 'Disponível' ? 'Indisponível' : 'Disponível';
-    db.ref(`veiculos_cadastrados/${key}`).update({ status: novoStatus });
+    const novoStatus = (statusAtual === 'Disponível') ? 'Indisponível' : 'Disponível';
+    const hojeStr = new Date().toISOString().split('T')[0];
+    db.ref(`veiculos_cadastrados/${key}`).update({ 
+      status: novoStatus,
+      dataStatus: hojeStr
+    });
   }
 
   db.ref('veiculos_cadastrados').on('value', snapshot => {
@@ -499,7 +528,7 @@
     cacheVeiculos = data || {};
 
     if (!data) {
-      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#777;">Nenhum veículo cadastrado.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#777;">Nenhum veículo cadastrado.</td></tr>';
       document.getElementById('kpiDisponiveis').textContent = '0 veículos';
       document.getElementById('kpiIndisponiveis').textContent = '0 veículos';
       document.getElementById('kpiTotalFrota').textContent = '0 veículos';
@@ -513,22 +542,38 @@
     Object.keys(data).forEach(key => {
       const item = data[key];
       total++;
-      if (item.status === 'Disponível') disp++;
+      
+      const isDisponivel = (item.status === 'Disponível');
+      if (isDisponivel) disp++;
       else indisp++;
 
-      const tr = document.createElement('tr');
-      const statusBadge = item.status === 'Disponível' 
+      const diasDiferenca = calcularDiasDiferenca(item.dataStatus);
+      const diasParadoHtml = !isDisponivel 
+        ? `<span class="badge badge-danger">${diasDiferenca} dia(s)</span>` 
+        : `-`;
+
+      const diasDisponivelHtml = isDisponivel 
+        ? `<span class="badge badge-ok">${diasDiferenca} dia(s)</span>` 
+        : `-`;
+
+      const statusBadge = isDisponivel 
         ? '<span class="badge badge-ok">DISPONÍVEL</span>' 
         : '<span class="badge badge-danger">INDISPONÍVEL</span>';
 
+      const dataFormatada = item.dataStatus ? item.dataStatus.split('-').reverse().join('/') : '-';
+
+      const tr = document.createElement('tr');
       tr.innerHTML = `
         <td><b>${item.modelo}</b></td>
         <td><b>${item.placa}</b></td>
         <td>${statusBadge}</td>
+        <td>${dataFormatada}</td>
+        <td>${diasParadoHtml}</td>
+        <td>${diasDisponivelHtml}</td>
         <td>${item.obs || '-'}</td>
         <td>
           <button class="btn-warning" onclick="editarVeiculo('${key}')">Editar</button>
-          <button class="btn-toggle" onclick="alternarStatusVeiculo('${key}', '${item.status}')">Mudar p/ ${item.status === 'Disponível' ? 'Indisponível' : 'Disponível'}</button>
+          <button class="btn-toggle" onclick="alternarStatusVeiculo('${key}', '${item.status}')">Mudar p/ ${isDisponivel ? 'Indisponível' : 'Disponível'}</button>
           <button class="btn-danger" onclick="removerItem('veiculos_cadastrados', '${key}')">Excluir</button>
         </td>
       `;
@@ -541,7 +586,7 @@
     });
 
     document.getElementById('kpiDisponiveis').textContent = `${disp} disponível(is)`;
-    document.getElementById('kpiIndisponiveis').textContent = `${indisp} indisponível(is)`;
+    document.getElementById('kpiIndisponiveis').textContent = `${indisp} parado(s)`;
     document.getElementById('kpiTotalFrota').textContent = `${total} veículo(s)`;
   });
 
