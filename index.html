@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sistema de Gestão Logística, Financeira e Frota</title>
+  <title>Sistema Integrado & Agenda de Tarefas</title>
   
-  <!-- Firebase SDKs (Compatibilidade para GitHub Pages) -->
+  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
@@ -14,6 +14,14 @@
     body { background-color: #f4f6f9; padding: 20px; color: #333; }
     h1, h2, h3 { margin-bottom: 15px; color: #1a252f; }
     .container { max-width: 1200px; margin: 0 auto; }
+    
+    /* NAVEGAÇÃO DE ABAS */
+    .nav-tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #ccc; padding-bottom: 5px; }
+    .tab-btn { background: #e0e0e0; color: #333; border: none; padding: 12px 20px; font-weight: bold; font-size: 14px; border-radius: 6px 6px 0 0; cursor: pointer; }
+    .tab-btn.active { background: #2c3e50; color: white; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
     .card { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 25px; }
     .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
     .form-group { display: flex; flex-direction: column; }
@@ -37,6 +45,8 @@
     .badge-alert { background-color: #f39c12; }
     .badge-danger { background-color: #e74c3c; }
     .badge-info { background-color: #2980b9; }
+    .badge-done { background-color: #7f8c8d; }
+    
     .summary-box { display: flex; gap: 15px; margin-top: 15px; flex-wrap: wrap; }
     .kpi-card { flex: 1; min-width: 200px; background: #ecf0f1; padding: 15px; border-radius: 6px; border-left: 5px solid #2980b9; }
     .kpi-card h4 { font-size: 12px; text-transform: uppercase; color: #7f8c8d; }
@@ -55,368 +65,437 @@
 
 <div class="container">
   <h1>
-    Painel Integrado: Frota, Manutenção e Financeiro
+    Painel Integrado de Gestão
     <span class="sync-status">🟢 Nuvem Sincronizada</span>
   </h1>
 
-  <!-- INDICADORES DA FROTA -->
-  <div class="card">
-    <h2>📊 Status Geral da Frota</h2>
-    <div class="summary-box">
-      <div class="kpi-card kpi-success">
-        <h4>Veículos Disponíveis</h4>
-        <p id="kpiDisponiveis">0 veículos</p>
+  <!-- NAVEGAÇÃO ENTRE ABAS -->
+  <div class="nav-tabs">
+    <button class="tab-btn active" onclick="switchTab('tabPainel', this)">📊 Gestão & Frota</button>
+    <button class="tab-btn" onclick="switchTab('tabAgenda', this)">📅 Agenda de Tarefas & Lembretes</button>
+  </div>
+
+  <!-- ABA 1: OPERACIONAL E FROTA -->
+  <div id="tabPainel" class="tab-content active">
+    <!-- INDICADORES DA FROTA -->
+    <div class="card">
+      <h2>📊 Status Geral da Frota</h2>
+      <div class="summary-box">
+        <div class="kpi-card kpi-success">
+          <h4>Veículos Disponíveis</h4>
+          <p id="kpiDisponiveis">0 veículos</p>
+        </div>
+        <div class="kpi-card kpi-warning">
+          <h4>Veículos Indisponíveis (Parados)</h4>
+          <p id="kpiIndisponiveis">0 veículos</p>
+        </div>
+        <div class="kpi-card">
+          <h4>Total na Frota</h4>
+          <p id="kpiTotalFrota">0 veículos</p>
+        </div>
       </div>
-      <div class="kpi-card kpi-warning">
-        <h4>Veículos Indisponíveis (Parados)</h4>
-        <p id="kpiIndisponiveis">0 veículos</p>
+    </div>
+
+    <!-- 1. CADASTRO DE VEÍCULOS -->
+    <div class="card">
+      <h2 id="titleVeiculo">1. Cadastro e Controle de Frota (Disponibilidade & Dias Parado)</h2>
+      <form id="cadastroVeiculoForm">
+        <input type="hidden" id="editVeiculoKey">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Modelo / Descrição do Veículo</label>
+            <input type="text" id="vModelo" placeholder="Ex: VW Delivery 9.170" required>
+          </div>
+          <div class="form-group">
+            <label>Placa do Veículo</label>
+            <input type="text" id="vPlaca" placeholder="Ex: ABC-1234" required>
+          </div>
+          <div class="form-group">
+            <label>Status Atual</label>
+            <select id="vStatus">
+              <option value="Disponível">Disponível</option>
+              <option value="Indisponível">Indisponível (Parado)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Data de Início do Status</label>
+            <input type="date" id="vDataStatus">
+          </div>
+          <div class="form-group">
+            <label>Observação / Motivo (Opcional)</label>
+            <input type="text" id="vObs" placeholder="Ex: Em manutenção / Aguardando peça">
+          </div>
+        </div>
+        <button type="button" id="btnSalvarVeiculo" onclick="cadastrarVeiculo()">Cadastrar Veículo</button>
+        <button type="button" id="btnCancelVeiculo" class="btn-cancel" onclick="cancelarEdicaoVeiculo()" style="display:none;">Cancelar Edição</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Lista de Veículos da Frota</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Modelo</th>
+            <th>Placa</th>
+            <th>Status</th>
+            <th>Desde</th>
+            <th>Dias Parado</th>
+            <th>Dias Disponível</th>
+            <th>Observação</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tbVeiculosCadastrados">
+          <tr><td colspan="8" style="text-align:center; color:#777;">Carregando frota...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 2. GESTÃO FINANCEIRA -->
+    <div class="card">
+      <h2 id="titleFinanceiro">2. Cadastro de Pedido / Nota Fiscal</h2>
+      <form id="financeForm">
+        <input type="hidden" id="editFinanceiroKey">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Nº Pedido / Nota Fiscal</label>
+            <input type="text" id="numPedido" placeholder="Ex: NF-12345" required>
+          </div>
+          <div class="form-group">
+            <label>Data de Emissão</label>
+            <input type="date" id="dataEmissao" required>
+          </div>
+          <div class="form-group">
+            <label>Valor Total (R$)</label>
+            <input type="number" step="0.01" id="valorPagamento" placeholder="Ex: 1500.00" required>
+          </div>
+          <div class="form-group">
+            <label>Forma de Pagamento</label>
+            <select id="formaPagamento" onchange="toggleFormaPagamento()">
+              <option value="Boleto">Boleto Bancário</option>
+              <option value="PIX">PIX</option>
+            </select>
+          </div>
+          <div class="form-group" id="groupDataPagamento">
+            <label id="lblDataPagamento">Data Vencimento Boleto</label>
+            <input type="date" id="dataVencimento" required>
+          </div>
+        </div>
+        <button type="button" id="btnSalvarFinanceiro" onclick="addFinanceiro()">Salvar na Nuvem</button>
+        <button type="button" id="btnCancelFinanceiro" class="btn-cancel" onclick="cancelarEdicaoFinanceiro()" style="display:none;">Cancelar Edição</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Controle de Notas, Boletos e Pagamentos</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Nº Pedido / NF</th>
+            <th>Data Emissão</th>
+            <th>Valor (R$)</th>
+            <th>Forma Pagamento</th>
+            <th>Data Vencimento/Pix</th>
+            <th>Status do Pagamento</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tbFinanceiro">
+          <tr><td colspan="7" style="text-align:center; color:#777;">Carregando dados...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 3. GESTÃO DE SAÍDAS -->
+    <div class="card">
+      <h2 id="titleViagem">3. Registro Rápido de Saídas / Viagens</h2>
+      <form id="frotaForm">
+        <input type="hidden" id="editViagemKey">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Selecione o Veículo / Placa</label>
+            <select id="veiculoSelect" required>
+              <option value="">Selecione um veículo cadastrado...</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Motorista Responsável</label>
+            <input type="text" id="motorista" placeholder="Ex: João Silva" required>
+          </div>
+          <div class="form-group">
+            <label>Data de Saída</label>
+            <input type="date" id="dataSaida" required>
+          </div>
+        </div>
+        <button type="button" id="btnSalvarViagem" onclick="addViagem()">Registrar Saída</button>
+        <button type="button" id="btnCancelViagem" class="btn-cancel" onclick="cancelarEdicaoViagem()" style="display:none;">Cancelar Edição</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>🚚 Totais de Saídas por Motorista (Até Hoje)</h2>
+      <div id="driverSummary" class="driver-list">
+        <p style="color:#777;">Nenhuma saída registrada até o momento.</p>
       </div>
-      <div class="kpi-card">
-        <h4>Total na Frota</h4>
-        <p id="kpiTotalFrota">0 veículos</p>
-      </div>
+    </div>
+
+    <div class="card">
+      <h2>Histórico de Viagens e Saídas</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Veículo / Placa</th>
+            <th>Motorista</th>
+            <th>Data de Saída</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tbViagens">
+          <tr><td colspan="4" style="text-align:center; color:#777;">Carregando histórico...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 4. MANUTENÇÃO -->
+    <div class="card">
+      <h2 id="titleManutencao">4. Registro de Manutenção Realizada</h2>
+      <form id="manutencaoForm">
+        <input type="hidden" id="editManutencaoKey">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Veículo / Placa</label>
+            <input type="text" id="mVeiculo" placeholder="Ex: VW Delivery (ABC-1234)" required>
+          </div>
+          <div class="form-group">
+            <label>Data da Realização</label>
+            <input type="date" id="mDataRealizada" required>
+          </div>
+          <div class="form-group">
+            <label>Tipo de Serviço</label>
+            <select id="mServico">
+              <option value="Troca de Óleo e Filtros">Troca de Óleo e Filtros</option>
+              <option value="Sistema de Freios">Sistema de Freios</option>
+              <option value="Pneus e Alinhamento">Pneus e Alinhamento</option>
+              <option value="Correias e Motores">Correias e Motores</option>
+              <option value="Suspensão e Amortecedores">Suspensão</option>
+              <option value="Elétrica e Bateria">Elétrica e Bateria</option>
+              <option value="Revisão Geral">Revisão Geral</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Peças Trocadas</label>
+            <input type="text" id="mPeças" placeholder="Ex: Filtro de óleo" required>
+          </div>
+          <div class="form-group">
+            <label>Custo Total (R$)</label>
+            <input type="number" step="0.01" id="mCusto" placeholder="Ex: 850.00" required>
+          </div>
+          <div class="form-group">
+            <label>KM Atual</label>
+            <input type="number" id="mKmAtual" required>
+          </div>
+          <div class="form-group">
+            <label>KM Próxima Revisão</label>
+            <input type="number" id="mKmProxima" required>
+          </div>
+          <div class="form-group">
+            <label>Data Próxima Revisão</label>
+            <input type="date" id="mDataProxima" required>
+          </div>
+        </div>
+        <button type="button" id="btnSalvarManutencao" onclick="addManutencao()">Registrar Manutenção</button>
+        <button type="button" id="btnCancelManutencao" class="btn-cancel" onclick="cancelarEdicaoManutencao()" style="display:none;">Cancelar Edição</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Histórico de Manutenções</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Veículo</th>
+            <th>Serviço / Peças</th>
+            <th>Custo (R$)</th>
+            <th>Realizado Em</th>
+            <th>KM Na Troca</th>
+            <th>Próxima Revisão</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tbManutencao">
+          <tr><td colspan="7" style="text-align:center; color:#777;">Carregando manutenções...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 5. ESTOQUE DE PEÇAS -->
+    <div class="card">
+      <h2 id="titleEstoque">5. Controle de Estoque de Peças</h2>
+      <form id="estoqueForm">
+        <input type="hidden" id="editEstoqueKey">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Nome da Peça</label>
+            <input type="text" id="pNome" placeholder="Ex: Pastilha de Freio" required>
+          </div>
+          <div class="form-group">
+            <label>Código / Aplicação</label>
+            <input type="text" id="pCodigo" placeholder="Ex: Iveco Daily">
+          </div>
+          <div class="form-group">
+            <label>Qtd Atual</label>
+            <input type="number" id="pQtd" required>
+          </div>
+          <div class="form-group">
+            <label>Qtd Mínima</label>
+            <input type="number" id="pQtdMin" required>
+          </div>
+          <div class="form-group">
+            <label>Localização</label>
+            <input type="text" id="pLocal" placeholder="Ex: Prateleira B2">
+          </div>
+        </div>
+        <button type="button" id="btnSalvarEstoque" onclick="addEstoque()">Salvar no Estoque</button>
+        <button type="button" id="btnCancelEstoque" class="btn-cancel" onclick="cancelarEdicaoEstoque()" style="display:none;">Cancelar Edição</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Inventário de Peças</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Peça</th>
+            <th>Código</th>
+            <th>Qtd. Estoque</th>
+            <th>Local</th>
+            <th>Status</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tbEstoque">
+          <tr><td colspan="6" style="text-align:center; color:#777;">Carregando estoque...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 6. RODÍZIO E FREIOS -->
+    <div class="card">
+      <h2 id="titlePneusFreios">6. Rodízio de Pneus & Pastilhas</h2>
+      <form id="pneusFreiosForm">
+        <input type="hidden" id="editPneusKey">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Veículo</label>
+            <input type="text" id="pfVeiculo" placeholder="Ex: Iveco Daily" required>
+          </div>
+          <div class="form-group">
+            <label>Tipo</label>
+            <select id="pfTipo">
+              <option value="Rodízio de Pneus">Rodízio de Pneus</option>
+              <option value="Pastilha de Freio">Pastilha de Freio</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Data</label>
+            <input type="date" id="pfData" required>
+          </div>
+          <div class="form-group">
+            <label>KM Trocado</label>
+            <input type="number" id="pfKmAtual" required>
+          </div>
+          <div class="form-group">
+            <label>KM Próximo Serviço</label>
+            <input type="number" id="pfKmProxima" required>
+          </div>
+        </div>
+        <button type="button" id="btnSalvarPneus" onclick="addPneusFreios()">Registrar Serviço</button>
+        <button type="button" id="btnCancelPneus" class="btn-cancel" onclick="cancelarEdicaoPneus()" style="display:none;">Cancelar Edição</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Controle de Pneus e Freios</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Veículo</th>
+            <th>Tipo</th>
+            <th>Data</th>
+            <th>KM Trocado</th>
+            <th>KM Próximo</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tbPneusFreios">
+          <tr><td colspan="6" style="text-align:center; color:#777;">Carregando registros...</td></tr>
+        </tbody>
+      </table>
     </div>
   </div>
 
-  <!-- 1. CADASTRO DE VEÍCULOS E STATUS DE DISPONIBILIDADE -->
-  <div class="card">
-    <h2 id="titleVeiculo">1. Cadastro e Controle de Frota (Disponibilidade & Dias Parado)</h2>
-    <form id="cadastroVeiculoForm">
-      <input type="hidden" id="editVeiculoKey">
-      <div class="form-grid">
-        <div class="form-group">
-          <label>Modelo / Descrição do Veículo</label>
-          <input type="text" id="vModelo" placeholder="Ex: VW Delivery 9.170" required>
+  <!-- ABA 2: AGENDA DE TAREFAS E LEMBRETES -->
+  <div id="tabAgenda" class="tab-content">
+    <div class="card">
+      <h2 id="titleAgenda">📋 Nova Tarefa / Lembrete</h2>
+      <form id="agendaForm">
+        <input type="hidden" id="editAgendaKey">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Descrição da Tarefa</label>
+            <input type="text" id="tDescricao" placeholder="Ex: Levar Iveco para Vistoria / Pagar boleto" required>
+          </div>
+          <div class="form-group">
+            <label>Categoria</label>
+            <select id="tCategoria">
+              <option value="Frota/Transporte">Frota / Transporte</option>
+              <option value="Manutenção">Manutenção</option>
+              <option value="Financeiro">Financeiro / Pagamentos</option>
+              <option value="Geral/Pessoal">Geral / Pessoal</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Data de Vencimento / Lembrete</label>
+            <input type="date" id="tData" required>
+          </div>
+          <div class="form-group">
+            <label>Responsável</label>
+            <input type="text" id="tResponsavel" placeholder="Ex: João / Kaique">
+          </div>
+          <div class="form-group">
+            <label>Status</label>
+            <select id="tStatus">
+              <option value="Pendente">Pendente</option>
+              <option value="Em Andamento">Em Andamento</option>
+              <option value="Concluída">Concluída</option>
+            </select>
+          </div>
         </div>
-        <div class="form-group">
-          <label>Placa do Veículo</label>
-          <input type="text" id="vPlaca" placeholder="Ex: ABC-1234" required>
-        </div>
-        <div class="form-group">
-          <label>Status Atual</label>
-          <select id="vStatus">
-            <option value="Disponível">Disponível</option>
-            <option value="Indisponível">Indisponível (Parado)</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Data de Início do Status</label>
-          <input type="date" id="vDataStatus">
-        </div>
-        <div class="form-group">
-          <label>Observação / Motivo (Opcional)</label>
-          <input type="text" id="vObs" placeholder="Ex: Em manutenção / Aguardando peça">
-        </div>
-      </div>
-      <button type="button" id="btnSalvarVeiculo" onclick="cadastrarVeiculo()">Cadastrar Veículo</button>
-      <button type="button" id="btnCancelVeiculo" class="btn-cancel" onclick="cancelarEdicaoVeiculo()" style="display:none;">Cancelar Edição</button>
-    </form>
-  </div>
-
-  <div class="card">
-    <h2>Lista de Veículos da Frota</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>Modelo</th>
-          <th>Placa</th>
-          <th>Status</th>
-          <th>Desde</th>
-          <th>Dias Parado</th>
-          <th>Dias Disponível</th>
-          <th>Observação</th>
-          <th>Ações</th>
-        </tr>
-      </thead>
-      <tbody id="tbVeiculosCadastrados">
-        <tr><td colspan="8" style="text-align:center; color:#777;">Carregando frota...</td></tr>
-      </tbody>
-    </table>
-  </div>
-
-  <!-- 2. GESTÃO FINANCEIRA E COMPRAS -->
-  <div class="card">
-    <h2 id="titleFinanceiro">2. Cadastro de Pedido / Nota Fiscal</h2>
-    <form id="financeForm">
-      <input type="hidden" id="editFinanceiroKey">
-      <div class="form-grid">
-        <div class="form-group">
-          <label>Nº Pedido / Nota Fiscal</label>
-          <input type="text" id="numPedido" placeholder="Ex: NF-12345" required>
-        </div>
-        <div class="form-group">
-          <label>Data de Emissão</label>
-          <input type="date" id="dataEmissao" required>
-        </div>
-        <div class="form-group">
-          <label>Valor Total (R$)</label>
-          <input type="number" step="0.01" id="valorPagamento" placeholder="Ex: 1500.00" required>
-        </div>
-        <div class="form-group">
-          <label>Forma de Pagamento</label>
-          <select id="formaPagamento" onchange="toggleFormaPagamento()">
-            <option value="Boleto">Boleto Bancário</option>
-            <option value="PIX">PIX</option>
-          </select>
-        </div>
-        <div class="form-group" id="groupDataPagamento">
-          <label id="lblDataPagamento">Data Vencimento Boleto</label>
-          <input type="date" id="dataVencimento" required>
-        </div>
-      </div>
-      <button type="button" id="btnSalvarFinanceiro" onclick="addFinanceiro()">Salvar na Nuvem</button>
-      <button type="button" id="btnCancelFinanceiro" class="btn-cancel" onclick="cancelarEdicaoFinanceiro()" style="display:none;">Cancelar Edição</button>
-    </form>
-  </div>
-
-  <div class="card">
-    <h2>Controle de Notas, Boletos e Pagamentos</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>Nº Pedido / NF</th>
-          <th>Data Emissão</th>
-          <th>Valor (R$)</th>
-          <th>Forma Pagamento</th>
-          <th>Data Vencimento/Pix</th>
-          <th>Status do Pagamento</th>
-          <th>Ações</th>
-        </tr>
-      </thead>
-      <tbody id="tbFinanceiro">
-        <tr><td colspan="7" style="text-align:center; color:#777;">Carregando dados da nuvem...</td></tr>
-      </tbody>
-    </table>
-  </div>
-
-  <!-- 3. GESTÃO DE SAÍDAS E CARGAS -->
-  <div class="card">
-    <h2 id="titleViagem">3. Registro Rápido de Saídas / Viagens</h2>
-    <form id="frotaForm">
-      <input type="hidden" id="editViagemKey">
-      <div class="form-grid">
-        <div class="form-group">
-          <label>Selecione o Veículo / Placa</label>
-          <select id="veiculoSelect" required>
-            <option value="">Selecione um veículo cadastrado...</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Motorista Responsável</label>
-          <input type="text" id="motorista" placeholder="Ex: João Silva" required>
-        </div>
-        <div class="form-group">
-          <label>Data de Saída</label>
-          <input type="date" id="dataSaida" required>
-        </div>
-      </div>
-      <button type="button" id="btnSalvarViagem" onclick="addViagem()">Registrar Saída</button>
-      <button type="button" id="btnCancelViagem" class="btn-cancel" onclick="cancelarEdicaoViagem()" style="display:none;">Cancelar Edição</button>
-    </form>
-  </div>
-
-  <!-- RESUMO DE SAÍDAS POR MOTORISTA ATÉ HOJE -->
-  <div class="card">
-    <h2>🚚 Totais de Saídas por Motorista (Até Hoje)</h2>
-    <div id="driverSummary" class="driver-list">
-      <p style="color:#777;">Nenhuma saída registrada até o momento.</p>
+        <button type="button" id="btnSalvarAgenda" onclick="addAgenda()">Salvar Tarefa</button>
+        <button type="button" id="btnCancelAgenda" class="btn-cancel" onclick="cancelarEdicaoAgenda()" style="display:none;">Cancelar Edição</button>
+      </form>
     </div>
-  </div>
 
-  <div class="card">
-    <h2>Histórico de Viagens e Saídas</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>Veículo / Placa</th>
-          <th>Motorista</th>
-          <th>Data de Saída</th>
-          <th>Ações</th>
-        </tr>
-      </thead>
-      <tbody id="tbViagens">
-        <tr><td colspan="4" style="text-align:center; color:#777;">Carregando histórico de viagens...</td></tr>
-      </tbody>
-    </table>
-  </div>
-
-  <!-- 4. MANUTENÇÕES E CUSTOS DA FROTA -->
-  <div class="card">
-    <h2 id="titleManutencao">4. Registro de Manutenção Realizada & Itens Substituídos</h2>
-    <form id="manutencaoForm">
-      <input type="hidden" id="editManutencaoKey">
-      <div class="form-grid">
-        <div class="form-group">
-          <label>Veículo / Placa</label>
-          <input type="text" id="mVeiculo" placeholder="Ex: VW Delivery (ABC-1234)" required>
-        </div>
-        <div class="form-group">
-          <label>Data da Realização</label>
-          <input type="date" id="mDataRealizada" required>
-        </div>
-        <div class="form-group">
-          <label>Tipo de Serviço / Categoria</label>
-          <select id="mServico">
-            <option value="Troca de Óleo e Filtros">Troca de Óleo e Filtros</option>
-            <option value="Sistema de Freios">Sistema de Freios (Pastilhas/Discos)</option>
-            <option value="Pneus e Alinhamento">Pneus, Rodízio e Alinhamento</option>
-            <option value="Correias e Motores">Correia Dentada / Tensores</option>
-            <option value="Suspensão e Amortecedores">Suspensão e Amortecedores</option>
-            <option value="Elétrica e Bateria">Elétrica / Bateria / Alternador</option>
-            <option value="Revisão Geral">Revisão Geral Preventiva</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Itens Substituídos / Peças Trocadas</label>
-          <input type="text" id="mPeças" placeholder="Ex: Filtro de óleo, Pastilha dianteira" required>
-        </div>
-        <div class="form-group">
-          <label>Custo Total (R$)</label>
-          <input type="number" step="0.01" id="mCusto" placeholder="Ex: 850.00" required>
-        </div>
-        <div class="form-group">
-          <label>KM no Momento da Troca</label>
-          <input type="number" id="mKmAtual" placeholder="Ex: 120000" required>
-        </div>
-        <div class="form-group">
-          <label>KM Prevista p/ Próxima Revisão</label>
-          <input type="number" id="mKmProxima" placeholder="Ex: 130000" required>
-        </div>
-        <div class="form-group">
-          <label>Data Prevista p/ Próxima Revisão</label>
-          <input type="date" id="mDataProxima" required>
-        </div>
-      </div>
-      <button type="button" id="btnSalvarManutencao" onclick="addManutencao()">Registrar Manutenção & Custo</button>
-      <button type="button" id="btnCancelManutencao" class="btn-cancel" onclick="cancelarEdicaoManutencao()" style="display:none;">Cancelar Edição</button>
-    </form>
-  </div>
-
-  <div class="card">
-    <h2>Histórico de Manutenções</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>Veículo</th>
-          <th>Serviço / Peças</th>
-          <th>Custo (R$)</th>
-          <th>Realizado Em</th>
-          <th>KM Na Troca</th>
-          <th>Próxima Revisão</th>
-          <th>Status</th>
-          <th>Ações</th>
-        </tr>
-      </thead>
-      <tbody id="tbManutencao">
-        <tr><td colspan="8" style="text-align:center; color:#777;">Carregando histórico de manutenções...</td></tr>
-      </tbody>
-    </table>
-  </div>
-
-  <!-- 5. ESTOQUE DE PEÇAS AUTOMOTIVAS -->
-  <div class="card">
-    <h2 id="titleEstoque">5. Controle de Estoque de Peças de Carros / Caminhões</h2>
-    <form id="estoqueForm">
-      <input type="hidden" id="editEstoqueKey">
-      <div class="form-grid">
-        <div class="form-group">
-          <label>Nome / Descrição da Peça</label>
-          <input type="text" id="pNome" placeholder="Ex: Pastilha de Freio Dianteira" required>
-        </div>
-        <div class="form-group">
-          <label>Código de Referência / Modelo</label>
-          <input type="text" id="pCodigo" placeholder="Ex: PF-1020 / Iveco Daily">
-        </div>
-        <div class="form-group">
-          <label>Quantidade Atual em Estoque</label>
-          <input type="number" id="pQtd" placeholder="Ex: 10" required>
-        </div>
-        <div class="form-group">
-          <label>Quantidade Mínima Alerta</label>
-          <input type="number" id="pQtdMin" placeholder="Ex: 2" required>
-        </div>
-        <div class="form-group">
-          <label>Local de Armazenamento / Prateleira</label>
-          <input type="text" id="pLocal" placeholder="Ex: Prateleira B2">
-        </div>
-      </div>
-      <button type="button" id="btnSalvarEstoque" onclick="addEstoque()">Salvar no Estoque</button>
-      <button type="button" id="btnCancelEstoque" class="btn-cancel" onclick="cancelarEdicaoEstoque()" style="display:none;">Cancelar Edição</button>
-    </form>
-  </div>
-
-  <div class="card">
-    <h2>Inventário de Peças em Estoque</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>Peça</th>
-          <th>Código / Aplicação</th>
-          <th>Qtd. Estoque</th>
-          <th>Local</th>
-          <th>Status Estoque</th>
-          <th>Ações</th>
-        </tr>
-      </thead>
-      <tbody id="tbEstoque">
-        <tr><td colspan="6" style="text-align:center; color:#777;">Carregando estoque de peças...</td></tr>
-      </tbody>
-    </table>
-  </div>
-
-  <!-- 6. CONTROLE DE RODÍZIO DE PNEUS E PASTILHAS DE FREIO -->
-  <div class="card">
-    <h2 id="titlePneusFreios">6. Plano de Rodízio de Pneus & Pastilhas de Freio (por KM e Data)</h2>
-    <form id="pneusFreiosForm">
-      <input type="hidden" id="editPneusKey">
-      <div class="form-grid">
-        <div class="form-group">
-          <label>Veículo / Caminhão</label>
-          <input type="text" id="pfVeiculo" placeholder="Ex: Iveco Daily (ABC-1234)" required>
-        </div>
-        <div class="form-group">
-          <label>Tipo de Item</label>
-          <select id="pfTipo">
-            <option value="Rodízio de Pneus">Rodízio de Pneus</option>
-            <option value="Pastilha de Freio">Pastilha de Freio</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Data da Troca / Rodízio</label>
-          <input type="date" id="pfData" required>
-        </div>
-        <div class="form-group">
-          <label>KM Atual na Troca / Rodízio</label>
-          <input type="number" id="pfKmAtual" placeholder="Ex: 100000" required>
-        </div>
-        <div class="form-group">
-          <label>KM Prevista Próximo Serviço</label>
-          <input type="number" id="pfKmProxima" placeholder="Ex: 110000" required>
-        </div>
-      </div>
-      <button type="button" id="btnSalvarPneus" onclick="addPneusFreios()">Registrar Rodízio / Pastilha</button>
-      <button type="button" id="btnCancelPneus" class="btn-cancel" onclick="cancelarEdicaoPneus()" style="display:none;">Cancelar Edição</button>
-    </form>
-  </div>
-
-  <div class="card">
-    <h2>Acompanhamento de Rodízio de Pneus e Pastilhas</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>Veículo / Caminhão</th>
-          <th>Tipo</th>
-          <th>Data da Última Troca/Rodízio</th>
-          <th>KM Trocado</th>
-          <th>KM Próximo Rodízio/Troca</th>
-          <th>Status</th>
-          <th>Ações</th>
-        </tr>
-      </thead>
-      <tbody id="tbPneusFreios">
-        <tr><td colspan="7" style="text-align:center; color:#777;">Carregando controle de pneus e freios...</td></tr>
-      </tbody>
-    </table>
+    <div class="card">
+      <h2>📅 Tarefas e Lembretes Agendados</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Descrição</th>
+            <th>Categoria</th>
+            <th>Data Vencimento</th>
+            <th>Responsável</th>
+            <th>Lembrete / Prazo</th>
+            <th>Status</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tbAgenda">
+          <tr><td colspan="7" style="text-align:center; color:#777;">Carregando tarefas...</td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 
 </div>
@@ -437,25 +516,129 @@
   const db = firebase.database();
 
   // Cache para edição
-  let cacheVeiculos = {};
-  let cacheFinanceiro = {};
-  let cacheViagens = {};
-  let cacheManutencoes = {};
-  let cacheEstoque = {};
-  let cachePneus = {};
+  let cacheVeiculos = {}, cacheFinanceiro = {}, cacheViagens = {}, cacheManutencoes = {}, cacheEstoque = {}, cachePneus = {}, cacheAgenda = {};
 
-  // Função auxiliar para calcular diferença em dias
+  // Funções de Abas
+  function switchTab(tabId, btn) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    btn.classList.add('active');
+  }
+
   function calcularDiasDiferenca(dataStr) {
     if (!dataStr) return 0;
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
     const dt = new Date(dataStr + 'T00:00:00');
     const diffTime = hoje - dt;
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays < 0 ? 0 : diffDays;
+    return Math.floor(diffTime / (1000 * 60 * 60 * 24));
   }
 
-  // --- 1. CADASTRO E CONTROLE DE VEÍCULOS ---
+  // --- ABA AGENDA DE TAREFAS ---
+  function addAgenda() {
+    const key = document.getElementById('editAgendaKey').value;
+    const descricao = document.getElementById('tDescricao').value.trim();
+    const categoria = document.getElementById('tCategoria').value;
+    const dataVenc = document.getElementById('tData').value;
+    const responsavel = document.getElementById('tResponsavel').value.trim();
+    const status = document.getElementById('tStatus').value;
+
+    if (!descricao || !dataVenc) {
+      alert('Preencha a Descrição e a Data de Vencimento!');
+      return;
+    }
+
+    const payload = { descricao, categoria, dataVenc, responsavel, status };
+
+    if (key) {
+      db.ref(`agenda_tarefas/${key}`).update(payload);
+    } else {
+      db.ref('agenda_tarefas').push(payload);
+    }
+    cancelarEdicaoAgenda();
+  }
+
+  function editarAgenda(key) {
+    const item = cacheAgenda[key];
+    if (!item) return;
+
+    document.getElementById('editAgendaKey').value = key;
+    document.getElementById('tDescricao').value = item.descricao || '';
+    document.getElementById('tCategoria').value = item.categoria || 'Frota/Transporte';
+    document.getElementById('tData').value = item.dataVenc || '';
+    document.getElementById('tResponsavel').value = item.responsavel || '';
+    document.getElementById('tStatus').value = item.status || 'Pendente';
+
+    document.getElementById('titleAgenda').textContent = "📋 Editar Tarefa";
+    document.getElementById('btnSalvarAgenda').textContent = "Atualizar Tarefa";
+    document.getElementById('btnCancelAgenda').style.display = "inline-block";
+  }
+
+  function cancelarEdicaoAgenda() {
+    document.getElementById('editAgendaKey').value = '';
+    document.getElementById('agendaForm').reset();
+    document.getElementById('titleAgenda').textContent = "📋 Nova Tarefa / Lembrete";
+    document.getElementById('btnSalvarAgenda').textContent = "Salvar Tarefa";
+    document.getElementById('btnCancelAgenda').style.display = "none";
+  }
+
+  function alternarStatusAgenda(key, statusAtual) {
+    const novoStatus = (statusAtual === 'Concluída') ? 'Pendente' : 'Concluída';
+    db.ref(`agenda_tarefas/${key}`).update({ status: novoStatus });
+  }
+
+  db.ref('agenda_tarefas').on('value', snapshot => {
+    const tbody = document.getElementById('tbAgenda');
+    tbody.innerHTML = '';
+    const data = snapshot.val();
+    cacheAgenda = data || {};
+
+    if (!data) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#777;">Nenhuma tarefa agendada.</td></tr>';
+      return;
+    }
+
+    Object.keys(data).forEach(key => {
+      const item = data[key];
+      const diffDias = calcularDiasDiferenca(item.dataVenc);
+      let lembreteBadge = '';
+
+      if (item.status === 'Concluída') {
+        lembreteBadge = `<span class="badge badge-done">FINALIZADA</span>`;
+      } else {
+        if (diffDias > 0) {
+          lembreteBadge = `<span class="badge badge-danger">ATRASADO (${diffDias}d)</span>`;
+        } else if (diffDias === 0) {
+          lembreteBadge = `<span class="badge badge-alert">VENCE HOJE!</span>`;
+        } else {
+          lembreteBadge = `<span class="badge badge-ok">Faltam ${Math.abs(diffDias)} dia(s)</span>`;
+        }
+      }
+
+      const statusBadge = item.status === 'Concluída' 
+        ? `<span class="badge badge-done">CONCLUÍDA</span>`
+        : (item.status === 'Em Andamento' ? `<span class="badge badge-info">EM ANDAMENTO</span>` : `<span class="badge badge-alert">PENDENTE</span>`);
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><b>${item.descricao}</b></td>
+        <td><span class="badge badge-info">${item.categoria}</span></td>
+        <td>${item.dataVenc.split('-').reverse().join('/')}</td>
+        <td>${item.responsavel || '-'}</td>
+        <td>${lembreteBadge}</td>
+        <td>${statusBadge}</td>
+        <td>
+          <button class="btn-warning" onclick="editarAgenda('${key}')">Editar</button>
+          <button class="btn-toggle" onclick="alternarStatusAgenda('${key}', '${item.status}')">${item.status === 'Concluída' ? 'Reabrir' : 'Concluir'}</button>
+          <button class="btn-danger" onclick="removerItem('agenda_tarefas', '${key}')">Excluir</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  });
+
+  // --- CONTROLE DE VEÍCULOS ---
   function cadastrarVeiculo() {
     const key = document.getElementById('editVeiculoKey').value;
     const modelo = document.getElementById('vModelo').value.trim();
@@ -464,58 +647,40 @@
     let dataStatus = document.getElementById('vDataStatus').value;
     const obs = document.getElementById('vObs').value.trim();
 
-    if (!modelo || !placa) {
-      alert('Preencha o Modelo e a Placa do veículo!');
-      return;
-    }
-
-    // Se não informar data de status, define a data de hoje
-    if (!dataStatus) {
-      dataStatus = new Date().toISOString().split('T')[0];
-    }
+    if (!modelo || !placa) { alert('Preencha o Modelo e a Placa!'); return; }
+    if (!dataStatus) { dataStatus = new Date().toISOString().split('T')[0]; }
 
     const payload = { modelo, placa, status, dataStatus, obs };
-
-    if (key) {
-      db.ref(`veiculos_cadastrados/${key}`).update(payload);
-    } else {
-      db.ref('veiculos_cadastrados').push(payload);
-    }
+    if (key) { db.ref(`veiculos_cadastrados/${key}`).update(payload); } 
+    else { db.ref('veiculos_cadastrados').push(payload); }
     cancelarEdicaoVeiculo();
   }
 
   function editarVeiculo(key) {
     const item = cacheVeiculos[key];
     if (!item) return;
-
     document.getElementById('editVeiculoKey').value = key;
     document.getElementById('vModelo').value = item.modelo || '';
     document.getElementById('vPlaca').value = item.placa || '';
     document.getElementById('vStatus').value = item.status || 'Disponível';
     document.getElementById('vDataStatus').value = item.dataStatus || new Date().toISOString().split('T')[0];
     document.getElementById('vObs').value = item.obs || '';
-
     document.getElementById('titleVeiculo').textContent = "1. Editar Veículo";
     document.getElementById('btnSalvarVeiculo').textContent = "Atualizar Veículo";
     document.getElementById('btnCancelVeiculo').style.display = "inline-block";
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   function cancelarEdicaoVeiculo() {
     document.getElementById('editVeiculoKey').value = '';
     document.getElementById('cadastroVeiculoForm').reset();
-    document.getElementById('titleVeiculo').textContent = "1. Cadastro e Controle de Frota (Disponibilidade & Dias Parado)";
+    document.getElementById('titleVeiculo').textContent = "1. Cadastro e Controle de Frota";
     document.getElementById('btnSalvarVeiculo').textContent = "Cadastrar Veículo";
     document.getElementById('btnCancelVeiculo').style.display = "none";
   }
 
   function alternarStatusVeiculo(key, statusAtual) {
     const novoStatus = (statusAtual === 'Disponível') ? 'Indisponível' : 'Disponível';
-    const hojeStr = new Date().toISOString().split('T')[0];
-    db.ref(`veiculos_cadastrados/${key}`).update({ 
-      status: novoStatus,
-      dataStatus: hojeStr
-    });
+    db.ref(`veiculos_cadastrados/${key}`).update({ status: novoStatus, dataStatus: new Date().toISOString().split('T')[0] });
   }
 
   db.ref('veiculos_cadastrados').on('value', snapshot => {
@@ -523,51 +688,32 @@
     const selectVeiculo = document.getElementById('veiculoSelect');
     tbody.innerHTML = '';
     selectVeiculo.innerHTML = '<option value="">Selecione um veículo cadastrado...</option>';
-
     const data = snapshot.val();
     cacheVeiculos = data || {};
 
     if (!data) {
       tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#777;">Nenhum veículo cadastrado.</td></tr>';
-      document.getElementById('kpiDisponiveis').textContent = '0 veículos';
-      document.getElementById('kpiIndisponiveis').textContent = '0 veículos';
-      document.getElementById('kpiTotalFrota').textContent = '0 veículos';
       return;
     }
 
-    let disp = 0;
-    let indisp = 0;
-    let total = 0;
-
+    let disp = 0, indisp = 0, total = 0;
     Object.keys(data).forEach(key => {
       const item = data[key];
       total++;
-      
       const isDisponivel = (item.status === 'Disponível');
-      if (isDisponivel) disp++;
-      else indisp++;
+      if (isDisponivel) disp++; else indisp++;
 
-      const diasDiferenca = calcularDiasDiferenca(item.dataStatus);
-      const diasParadoHtml = !isDisponivel 
-        ? `<span class="badge badge-danger">${diasDiferenca} dia(s)</span>` 
-        : `-`;
-
-      const diasDisponivelHtml = isDisponivel 
-        ? `<span class="badge badge-ok">${diasDiferenca} dia(s)</span>` 
-        : `-`;
-
-      const statusBadge = isDisponivel 
-        ? '<span class="badge badge-ok">DISPONÍVEL</span>' 
-        : '<span class="badge badge-danger">INDISPONÍVEL</span>';
-
-      const dataFormatada = item.dataStatus ? item.dataStatus.split('-').reverse().join('/') : '-';
+      const diff = calcularDiasDiferenca(item.dataStatus);
+      const diasParadoHtml = !isDisponivel ? `<span class="badge badge-danger">${diff} dia(s)</span>` : `-`;
+      const diasDisponivelHtml = isDisponivel ? `<span class="badge badge-ok">${diff} dia(s)</span>` : `-`;
+      const statusBadge = isDisponivel ? '<span class="badge badge-ok">DISPONÍVEL</span>' : '<span class="badge badge-danger">INDISPONÍVEL</span>';
 
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td><b>${item.modelo}</b></td>
         <td><b>${item.placa}</b></td>
         <td>${statusBadge}</td>
-        <td>${dataFormatada}</td>
+        <td>${item.dataStatus ? item.dataStatus.split('-').reverse().join('/') : '-'}</td>
         <td>${diasParadoHtml}</td>
         <td>${diasDisponivelHtml}</td>
         <td>${item.obs || '-'}</td>
@@ -581,7 +727,7 @@
 
       const opt = document.createElement('option');
       opt.value = `${item.modelo} (${item.placa})`;
-      opt.textContent = `${item.modelo} - ${item.placa} [${item.status}]`;
+      opt.textContent = `${item.modelo} - ${item.placa}`;
       selectVeiculo.appendChild(opt);
     });
 
@@ -590,29 +736,9 @@
     document.getElementById('kpiTotalFrota').textContent = `${total} veículo(s)`;
   });
 
-  // --- 2. FINANCEIRO ---
+  // --- OUTROS MÓDULOS (FINANCEIRO, VIAGENS, MANUTENÇÃO, ESTOQUE, PNEUS) ---
   function toggleFormaPagamento() {
-    const forma = document.getElementById('formaPagamento').value;
-    const lbl = document.getElementById('lblDataPagamento');
-    lbl.textContent = (forma === 'PIX') ? 'Data do Pagamento PIX' : 'Data Vencimento Boleto';
-  }
-
-  function getStatusPagamento(dataStr, forma) {
-    if (!dataStr) return `<span class="badge badge-info">PENDENTE</span>`;
-    const hoje = new Date();
-    hoje.setHours(0,0,0,0);
-    const dt = new Date(dataStr + 'T00:00:00');
-    const diffDays = Math.ceil((dt - hoje) / (1000 * 60 * 60 * 24));
-
-    if (forma === 'PIX') {
-      if (diffDays <= 0) return `<span class="badge badge-ok">PAGO (PIX)</span>`;
-      return `<span class="badge badge-alert">PIX AGENDADO (${diffDays}d)</span>`;
-    }
-
-    if (diffDays < 0) return `<span class="badge badge-danger">VENCIDO (${Math.abs(diffDays)}d)</span>`;
-    if (diffDays === 0) return `<span class="badge badge-alert">VENCE HOJE</span>`;
-    if (diffDays <= 3) return `<span class="badge badge-alert">Vence em ${diffDays}d</span>`;
-    return `<span class="badge badge-ok">Em dia (${diffDays}d)</span>`;
+    document.getElementById('lblDataPagamento').textContent = (document.getElementById('formaPagamento').value === 'PIX') ? 'Data do Pagamento PIX' : 'Data Vencimento Boleto';
   }
 
   function addFinanceiro() {
@@ -623,33 +749,21 @@
     const formaPagamento = document.getElementById('formaPagamento').value;
     const dataVencimento = document.getElementById('dataVencimento').value;
 
-    if (!numPedido || !dataEmissao || !dataVencimento || valorPagamento <= 0) {
-      alert('Preencha o Número do Pedido/NF, Data de Emissão, Valor e Data de Vencimento/Pix!');
-      return;
-    }
-
+    if (!numPedido || !dataEmissao || !dataVencimento) { alert('Preencha os campos obrigatórios!'); return; }
     const payload = { numPedido, dataEmissao, valorPagamento, formaPagamento, dataVencimento };
-
-    if (key) {
-      db.ref(`financeiro/${key}`).update(payload);
-    } else {
-      db.ref('financeiro').push(payload);
-    }
-
+    if (key) { db.ref(`financeiro/${key}`).update(payload); } else { db.ref('financeiro').push(payload); }
     cancelarEdicaoFinanceiro();
   }
 
   function editarFinanceiro(key) {
     const item = cacheFinanceiro[key];
     if (!item) return;
-
     document.getElementById('editFinanceiroKey').value = key;
     document.getElementById('numPedido').value = item.numPedido || '';
     document.getElementById('dataEmissao').value = item.dataEmissao || '';
     document.getElementById('valorPagamento').value = item.valorPagamento || '';
     document.getElementById('formaPagamento').value = item.formaPagamento || 'Boleto';
     document.getElementById('dataVencimento').value = item.dataVencimento || '';
-
     toggleFormaPagamento();
     document.getElementById('titleFinanceiro').textContent = "2. Editar Pedido / Nota Fiscal";
     document.getElementById('btnSalvarFinanceiro').textContent = "Atualizar Registro";
@@ -670,12 +784,7 @@
     tbody.innerHTML = '';
     const data = snapshot.val();
     cacheFinanceiro = data || {};
-
-    if (!data) {
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#777;">Nenhum lançamento financeiro registrado.</td></tr>';
-      return;
-    }
-
+    if (!data) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#777;">Nenhum lançamento.</td></tr>'; return; }
     Object.keys(data).forEach(key => {
       const item = data[key];
       const tr = document.createElement('tr');
@@ -685,7 +794,7 @@
         <td><b>R$ ${Number(item.valorPagamento || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</b></td>
         <td><span class="badge ${item.formaPagamento === 'PIX' ? 'badge-ok' : 'badge-info'}">${item.formaPagamento}</span></td>
         <td>${item.dataVencimento ? item.dataVencimento.split('-').reverse().join('/') : 'N/A'}</td>
-        <td>${getStatusPagamento(item.dataVencimento, item.formaPagamento)}</td>
+        <td><span class="badge badge-ok">EM DIA</span></td>
         <td>
           <button class="btn-warning" onclick="editarFinanceiro('${key}')">Editar</button>
           <button class="btn-danger" onclick="removerItem('financeiro', '${key}')">Excluir</button>
@@ -695,39 +804,25 @@
     });
   });
 
-  // --- 3. VIAGENS / SAÍDAS ---
   function addViagem() {
     const key = document.getElementById('editViagemKey').value;
     const veiculo = document.getElementById('veiculoSelect').value;
     const motorista = document.getElementById('motorista').value.trim();
     const dataSaida = document.getElementById('dataSaida').value;
-
-    if (!veiculo || !motorista || !dataSaida) {
-      alert('Selecione o veículo, preencha o motorista e informe a data de saída!');
-      return;
-    }
-
+    if (!veiculo || !motorista || !dataSaida) { alert('Preencha os campos da viagem!'); return; }
     const payload = { veiculo, motorista, dataSaida };
-
-    if (key) {
-      db.ref(`viagens/${key}`).update(payload);
-    } else {
-      db.ref('viagens').push(payload);
-    }
-
+    if (key) { db.ref(`viagens/${key}`).update(payload); } else { db.ref('viagens').push(payload); }
     cancelarEdicaoViagem();
   }
 
   function editarViagem(key) {
     const item = cacheViagens[key];
     if (!item) return;
-
     document.getElementById('editViagemKey').value = key;
     document.getElementById('veiculoSelect').value = item.veiculo || '';
     document.getElementById('motorista').value = item.motorista || '';
     document.getElementById('dataSaida').value = item.dataSaida || '';
-
-    document.getElementById('titleViagem').textContent = "3. Editar Saída / Viagem";
+    document.getElementById('titleViagem').textContent = "3. Editar Saída";
     document.getElementById('btnSalvarViagem').textContent = "Atualizar Saída";
     document.getElementById('btnCancelViagem').style.display = "inline-block";
   }
@@ -735,7 +830,7 @@
   function cancelarEdicaoViagem() {
     document.getElementById('editViagemKey').value = '';
     document.getElementById('frotaForm').reset();
-    document.getElementById('titleViagem').textContent = "3. Registro Rápido de Saídas / Viagens";
+    document.getElementById('titleViagem').textContent = "3. Registro Rápido de Saídas";
     document.getElementById('btnSalvarViagem').textContent = "Registrar Saída";
     document.getElementById('btnCancelViagem').style.display = "none";
   }
@@ -743,29 +838,16 @@
   db.ref('viagens').on('value', snapshot => {
     const tbody = document.getElementById('tbViagens');
     const driverSummary = document.getElementById('driverSummary');
-    tbody.innerHTML = '';
-    driverSummary.innerHTML = '';
-
+    tbody.innerHTML = ''; driverSummary.innerHTML = '';
     const data = snapshot.val();
     cacheViagens = data || {};
-
-    if (!data) {
-      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#777;">Nenhuma viagem registrada.</td></tr>';
-      driverSummary.innerHTML = '<p style="color:#777;">Nenhuma saída registrada até o momento.</p>';
-      return;
-    }
-
+    if (!data) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#777;">Nenhuma viagem.</td></tr>'; return; }
     const motoristaContagem = {};
     const hojeStr = new Date().toISOString().split('T')[0];
 
     Object.keys(data).forEach(key => {
       const item = data[key];
-
-      if (item.dataSaida <= hojeStr) {
-        const nomeMot = item.motorista.trim();
-        motoristaContagem[nomeMot] = (motoristaContagem[nomeMot] || 0) + 1;
-      }
-
+      if (item.dataSaida <= hojeStr) { motoristaContagem[item.motorista.trim()] = (motoristaContagem[item.motorista.trim()] || 0) + 1; }
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td><b>${item.veiculo}</b></td>
@@ -779,24 +861,14 @@
       tbody.appendChild(tr);
     });
 
-    const nomes = Object.keys(motoristaContagem);
-    if (nomes.length === 0) {
-      driverSummary.innerHTML = '<p style="color:#777;">Nenhuma saída realizada até a data de hoje.</p>';
-    } else {
-      nomes.sort().forEach(nome => {
-        const count = motoristaContagem[nome];
-        const card = document.createElement('div');
-        card.className = 'driver-card';
-        card.innerHTML = `
-          <span class="driver-name">${nome}</span>
-          <span class="driver-count">${count} saída(s)</span>
-        `;
-        driverSummary.appendChild(card);
-      });
-    }
+    Object.keys(motoristaContagem).forEach(nome => {
+      const card = document.createElement('div');
+      card.className = 'driver-card';
+      card.innerHTML = `<span class="driver-name">${nome}</span><span class="driver-count">${motoristaContagem[nome]} saída(s)</span>`;
+      driverSummary.appendChild(card);
+    });
   });
 
-  // --- 4. MANUTENÇÃO ---
   function addManutencao() {
     const key = document.getElementById('editManutencaoKey').value;
     const veiculo = document.getElementById('mVeiculo').value.trim();
@@ -808,37 +880,24 @@
     const kmProxima = parseInt(document.getElementById('mKmProxima').value);
     const dataProxima = document.getElementById('mDataProxima').value;
 
-    if (!veiculo || !dataRealizada || !peças || isNaN(kmAtual) || isNaN(kmProxima) || !dataProxima) {
-      alert('Preencha todas as informações da manutenção!');
-      return;
-    }
-
     const payload = { veiculo, dataRealizada, servico, peças, custo, kmAtual, kmProxima, dataProxima };
-
-    if (key) {
-      db.ref(`manutencoes/${key}`).update(payload);
-    } else {
-      db.ref('manutencoes').push(payload);
-    }
-
+    if (key) { db.ref(`manutencoes/${key}`).update(payload); } else { db.ref('manutencoes').push(payload); }
     cancelarEdicaoManutencao();
   }
 
   function editarManutencao(key) {
     const item = cacheManutencoes[key];
     if (!item) return;
-
     document.getElementById('editManutencaoKey').value = key;
     document.getElementById('mVeiculo').value = item.veiculo || '';
     document.getElementById('mDataRealizada').value = item.dataRealizada || '';
-    document.getElementById('mServico').value = item.servico || 'Troca de Óleo e Filtros';
+    document.getElementById('mServico').value = item.servico || '';
     document.getElementById('mPeças').value = item.peças || '';
     document.getElementById('mCusto').value = item.custo || '';
     document.getElementById('mKmAtual').value = item.kmAtual || '';
     document.getElementById('mKmProxima').value = item.kmProxima || '';
     document.getElementById('mDataProxima').value = item.dataProxima || '';
-
-    document.getElementById('titleManutencao').textContent = "4. Editar Registro de Manutenção";
+    document.getElementById('titleManutencao').textContent = "4. Editar Manutenção";
     document.getElementById('btnSalvarManutencao').textContent = "Atualizar Manutenção";
     document.getElementById('btnCancelManutencao').style.display = "inline-block";
   }
@@ -846,8 +905,8 @@
   function cancelarEdicaoManutencao() {
     document.getElementById('editManutencaoKey').value = '';
     document.getElementById('manutencaoForm').reset();
-    document.getElementById('titleManutencao').textContent = "4. Registro de Manutenção Realizada & Itens Substituídos";
-    document.getElementById('btnSalvarManutencao').textContent = "Registrar Manutenção & Custo";
+    document.getElementById('titleManutencao').textContent = "4. Registro de Manutenção Realizada";
+    document.getElementById('btnSalvarManutencao').textContent = "Registrar Manutenção";
     document.getElementById('btnCancelManutencao').style.display = "none";
   }
 
@@ -856,23 +915,17 @@
     tbody.innerHTML = '';
     const data = snapshot.val();
     cacheManutencoes = data || {};
-
-    if (!data) {
-      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#777;">Nenhuma manutenção registrada.</td></tr>';
-      return;
-    }
-
+    if (!data) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#777;">Nenhuma manutenção.</td></tr>'; return; }
     Object.keys(data).forEach(key => {
       const item = data[key];
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td><b>${item.veiculo}</b></td>
-        <td><b>${item.servico}</b><br><small style="color:#555;">${item.peças}</small></td>
+        <td><b>${item.servico}</b><br><small>${item.peças}</small></td>
         <td>R$ ${Number(item.custo).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
         <td>${item.dataRealizada.split('-').reverse().join('/')}</td>
-        <td>${Number(item.kmAtual).toLocaleString('pt-BR')} KM</td>
-        <td><b>${Number(item.kmProxima).toLocaleString('pt-BR')} KM</b><br><small>${item.dataProxima.split('-').reverse().join('/')}</small></td>
-        <td><span class="badge badge-ok">REGISTRADO</span></td>
+        <td>${item.kmAtual} KM</td>
+        <td><b>${item.kmProxima} KM</b><br><small>${item.dataProxima.split('-').reverse().join('/')}</small></td>
         <td>
           <button class="btn-warning" onclick="editarManutencao('${key}')">Editar</button>
           <button class="btn-danger" onclick="removerItem('manutencoes', '${key}')">Excluir</button>
@@ -882,7 +935,6 @@
     });
   });
 
-  // --- 5. ESTOQUE DE PEÇAS ---
   function addEstoque() {
     const key = document.getElementById('editEstoqueKey').value;
     const nome = document.getElementById('pNome').value.trim();
@@ -890,34 +942,21 @@
     const qtd = parseInt(document.getElementById('pQtd').value);
     const qtdMin = parseInt(document.getElementById('pQtdMin').value);
     const local = document.getElementById('pLocal').value.trim();
-
-    if (!nome || isNaN(qtd) || isNaN(qtdMin)) {
-      alert('Preencha o Nome da Peça, Quantidade Atual e Mínima!');
-      return;
-    }
-
     const payload = { nome, codigo, qtd, qtdMin, local };
-
-    if (key) {
-      db.ref(`estoque_pecas/${key}`).update(payload);
-    } else {
-      db.ref('estoque_pecas').push(payload);
-    }
+    if (key) { db.ref(`estoque_pecas/${key}`).update(payload); } else { db.ref('estoque_pecas').push(payload); }
     cancelarEdicaoEstoque();
   }
 
   function editarEstoque(key) {
     const item = cacheEstoque[key];
     if (!item) return;
-
     document.getElementById('editEstoqueKey').value = key;
     document.getElementById('pNome').value = item.nome || '';
     document.getElementById('pCodigo').value = item.codigo || '';
     document.getElementById('pQtd').value = item.qtd || 0;
     document.getElementById('pQtdMin').value = item.qtdMin || 0;
     document.getElementById('pLocal').value = item.local || '';
-
-    document.getElementById('titleEstoque').textContent = "5. Editar Peça no Estoque";
+    document.getElementById('titleEstoque').textContent = "5. Editar Estoque";
     document.getElementById('btnSalvarEstoque').textContent = "Atualizar Peça";
     document.getElementById('btnCancelEstoque').style.display = "inline-block";
   }
@@ -925,7 +964,7 @@
   function cancelarEdicaoEstoque() {
     document.getElementById('editEstoqueKey').value = '';
     document.getElementById('estoqueForm').reset();
-    document.getElementById('titleEstoque').textContent = "5. Controle de Estoque de Peças de Carros / Caminhões";
+    document.getElementById('titleEstoque').textContent = "5. Controle de Estoque de Peças";
     document.getElementById('btnSalvarEstoque').textContent = "Salvar no Estoque";
     document.getElementById('btnCancelEstoque').style.display = "none";
   }
@@ -935,26 +974,16 @@
     tbody.innerHTML = '';
     const data = snapshot.val();
     cacheEstoque = data || {};
-
-    if (!data) {
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#777;">Nenhuma peça cadastrada no estoque.</td></tr>';
-      return;
-    }
-
+    if (!data) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#777;">Sem peças.</td></tr>'; return; }
     Object.keys(data).forEach(key => {
       const item = data[key];
       const tr = document.createElement('tr');
-      const estaBaixo = item.qtd <= item.qtdMin;
-      const statusBadge = estaBaixo
-        ? `<span class="badge badge-danger">ESTOQUE BAIXO (${item.qtd})</span>`
-        : `<span class="badge badge-ok">DISPONÍVEL (${item.qtd})</span>`;
-
       tr.innerHTML = `
         <td><b>${item.nome}</b></td>
         <td>${item.codigo || '-'}</td>
-        <td><b>${item.qtd} un.</b> (Mín: ${item.qtdMin})</td>
+        <td><b>${item.qtd} un.</b></td>
         <td>${item.local || '-'}</td>
-        <td>${statusBadge}</td>
+        <td>${item.qtd <= item.qtdMin ? '<span class="badge badge-danger">BAIXO</span>' : '<span class="badge badge-ok">OK</span>'}</td>
         <td>
           <button class="btn-warning" onclick="editarEstoque('${key}')">Editar</button>
           <button class="btn-danger" onclick="removerItem('estoque_pecas', '${key}')">Excluir</button>
@@ -964,7 +993,6 @@
     });
   });
 
-  // --- 6. CONTROLE DE PNEUS E FREIOS ---
   function addPneusFreios() {
     const key = document.getElementById('editPneusKey').value;
     const veiculo = document.getElementById('pfVeiculo').value.trim();
@@ -972,43 +1000,30 @@
     const dataServico = document.getElementById('pfData').value;
     const kmAtual = parseInt(document.getElementById('pfKmAtual').value);
     const kmProxima = parseInt(document.getElementById('pfKmProxima').value);
-
-    if (!veiculo || !dataServico || isNaN(kmAtual) || isNaN(kmProxima)) {
-      alert('Preencha todas as informações de Pneus/Freios!');
-      return;
-    }
-
     const payload = { veiculo, tipo, dataServico, kmAtual, kmProxima };
-
-    if (key) {
-      db.ref(`pneus_freios/${key}`).update(payload);
-    } else {
-      db.ref('pneus_freios').push(payload);
-    }
+    if (key) { db.ref(`pneus_freios/${key}`).update(payload); } else { db.ref('pneus_freios').push(payload); }
     cancelarEdicaoPneus();
   }
 
   function editarPneusFreios(key) {
     const item = cachePneus[key];
     if (!item) return;
-
     document.getElementById('editPneusKey').value = key;
     document.getElementById('pfVeiculo').value = item.veiculo || '';
-    document.getElementById('pfTipo').value = item.tipo || 'Rodízio de Pneus';
+    document.getElementById('pfTipo').value = item.tipo || '';
     document.getElementById('pfData').value = item.dataServico || '';
     document.getElementById('pfKmAtual').value = item.kmAtual || '';
     document.getElementById('pfKmProxima').value = item.kmProxima || '';
-
-    document.getElementById('titlePneusFreios').textContent = "6. Editar Registro de Rodízio / Pastilha";
-    document.getElementById('btnSalvarPneus').textContent = "Atualizar Registro";
+    document.getElementById('titlePneusFreios').textContent = "6. Editar Registro";
+    document.getElementById('btnSalvarPneus').textContent = "Atualizar";
     document.getElementById('btnCancelPneus').style.display = "inline-block";
   }
 
   function cancelarEdicaoPneus() {
     document.getElementById('editPneusKey').value = '';
     document.getElementById('pneusFreiosForm').reset();
-    document.getElementById('titlePneusFreios').textContent = "6. Plano de Rodízio de Pneus & Pastilhas de Freio (por KM e Data)";
-    document.getElementById('btnSalvarPneus').textContent = "Registrar Rodízio / Pastilha";
+    document.getElementById('titlePneusFreios').textContent = "6. Rodízio de Pneus & Pastilhas";
+    document.getElementById('btnSalvarPneus').textContent = "Registrar Serviço";
     document.getElementById('btnCancelPneus').style.display = "none";
   }
 
@@ -1017,23 +1032,16 @@
     tbody.innerHTML = '';
     const data = snapshot.val();
     cachePneus = data || {};
-
-    if (!data) {
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#777;">Nenhum rodízio ou troca de pastilha registrado.</td></tr>';
-      return;
-    }
-
+    if (!data) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#777;">Sem registros.</td></tr>'; return; }
     Object.keys(data).forEach(key => {
       const item = data[key];
       const tr = document.createElement('tr');
-
       tr.innerHTML = `
         <td><b>${item.veiculo}</b></td>
-        <td><span class="badge ${item.tipo === 'Rodízio de Pneus' ? 'badge-info' : 'badge-alert'}">${item.tipo}</span></td>
+        <td><span class="badge badge-info">${item.tipo}</span></td>
         <td>${item.dataServico.split('-').reverse().join('/')}</td>
-        <td>${Number(item.kmAtual).toLocaleString('pt-BR')} KM</td>
-        <td><b>${Number(item.kmProxima).toLocaleString('pt-BR')} KM</b></td>
-        <td><span class="badge badge-ok">ACOMPANHANDO</span></td>
+        <td>${item.kmAtual} KM</td>
+        <td><b>${item.kmProxima} KM</b></td>
         <td>
           <button class="btn-warning" onclick="editarPneusFreios('${key}')">Editar</button>
           <button class="btn-danger" onclick="removerItem('pneus_freios', '${key}')">Excluir</button>
@@ -1043,11 +1051,8 @@
     });
   });
 
-  // --- FUNÇÃO DE EXCLUSÃO ---
   function removerItem(no, id) {
-    if (confirm('Deseja excluir este registro da nuvem?')) {
-      db.ref(`${no}/${id}`).remove();
-    }
+    if (confirm('Deseja excluir este registro da nuvem?')) { db.ref(`${no}/${id}`).remove(); }
   }
 </script>
 
