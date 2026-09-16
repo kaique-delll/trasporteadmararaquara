@@ -784,14 +784,14 @@
     tbody.innerHTML = '';
     const data = snapshot.val();
     cacheFinanceiro = data || {};
-    if (!data) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#777;">Nenhum lançamento.</td></tr>'; return; }
+    if (!data) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#777;">Nenum lançamento.</td></tr>'; return; }
     Object.keys(data).forEach(key => {
       const item = data[key];
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td><b>${item.numPedido}</b></td>
         <td>${item.dataEmissao.split('-').reverse().join('/')}</td>
-        <td><b>R$ ${Number(item.valorPagamento || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</b></td>
+        <td><b>R$ ${Number(item.valorPagamento || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</b></td>
         <td><span class="badge ${item.formaPagamento === 'PIX' ? 'badge-ok' : 'badge-info'}">${item.formaPagamento}</span></td>
         <td>${item.dataVencimento ? item.dataVencimento.split('-').reverse().join('/') : 'N/A'}</td>
         <td><span class="badge badge-ok">EM DIA</span></td>
@@ -922,7 +922,7 @@
       tr.innerHTML = `
         <td><b>${item.veiculo}</b></td>
         <td><b>${item.servico}</b><br><small>${item.peças}</small></td>
-        <td>R$ ${Number(item.custo).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+        <td>R$ ${Number(item.custo).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
         <td>${item.dataRealizada.split('-').reverse().join('/')}</td>
         <td>${item.kmAtual} KM</td>
         <td><b>${item.kmProxima} KM</b><br><small>${item.dataProxima.split('-').reverse().join('/')}</small></td>
