@@ -59,6 +59,10 @@
     .driver-card { background: #f8f9fa; border: 1px solid #e2e8f0; border-left: 4px solid #27ae60; padding: 10px 15px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
     .driver-name { font-weight: bold; color: #2c3e50; font-size: 14px; }
     .driver-count { background: #27ae60; color: white; padding: 3px 10px; border-radius: 12px; font-weight: bold; font-size: 12px; }
+
+    /* CABEÇALHOS DE GRUPO POR SEMANA E PLACA */
+    .week-header { background-color: #34495e !important; color: #fff !important; font-size: 14px; font-weight: bold; }
+    .plate-header { background-color: #eaeded !important; color: #2c3e50 !important; font-size: 12px; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -241,7 +245,7 @@
     </div>
 
     <div class="card">
-      <h2>Histórico de Viagens e Saídas</h2>
+      <h2>Histórico de Viagens e Saídas (Organizado por Semana e Placa)</h2>
       <table>
         <thead>
           <tr>
@@ -515,17 +519,13 @@
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
 
-  // Cache para edição
   let cacheVeiculos = {}, cacheFinanceiro = {}, cacheViagens = {}, cacheManutencoes = {}, cacheEstoque = {}, cachePneus = {}, cacheAgenda = {};
 
-  // Funções para conversão e formatação monetária segura em R$
   function parseValorBR(val) {
     if (!val) return 0;
     if (typeof val === 'number') return val;
     let s = val.toString().trim();
-    if (s.includes(',')) {
-      s = s.replace(/\./g, '').replace(',', '.');
-    }
+    if (s.includes(',')) { s = s.replace(/\./g, '').replace(',', '.'); }
     const n = parseFloat(s);
     return isNaN(n) ? 0 : n;
   }
@@ -535,7 +535,6 @@
     return num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
-  // Funções de Abas
   function switchTab(tabId, btn) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
@@ -552,6 +551,27 @@
     return Math.floor(diffTime / (1000 * 60 * 60 * 24));
   }
 
+  // Função para obter o intervalo da semana de uma data (Ex: 14/09 a 20/09)
+  function getSemanaInfo(dataStr) {
+    if (!dataStr) return { chave: "Sem Data", texto: "Data Não Definida" };
+    const dt = new Date(dataStr + 'T00:00:00');
+    const day = dt.getDay(); // 0: Dom, 1: Seg...
+    
+    // Início na Segunda-feira
+    const seg = new Date(dt);
+    seg.setDate(dt.getDate() - (day === 0 ? 6 : day - 1));
+    
+    // Fim no Domingo
+    const dom = new Date(seg);
+    dom.setDate(seg.getDate() + 6);
+
+    const formatar = (d) => String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
+    const chave = seg.toISOString().split('T')[0];
+    const texto = `Semana de ${formatar(seg)} até ${formatar(dom)}`;
+
+    return { chave, texto };
+  }
+
   // --- ABA AGENDA DE TAREFAS ---
   function addAgenda() {
     const key = document.getElementById('editAgendaKey').value;
@@ -561,32 +581,21 @@
     const responsavel = document.getElementById('tResponsavel').value.trim();
     const status = document.getElementById('tStatus').value;
 
-    if (!descricao || !dataVenc) {
-      alert('Preencha a Descrição e a Data de Vencimento!');
-      return;
-    }
-
+    if (!descricao || !dataVenc) { alert('Preencha a Descrição e a Data!'); return; }
     const payload = { descricao, categoria, dataVenc, responsavel, status };
-
-    if (key) {
-      db.ref(`agenda_tarefas/${key}`).update(payload);
-    } else {
-      db.ref('agenda_tarefas').push(payload);
-    }
+    if (key) { db.ref(`agenda_tarefas/${key}`).update(payload); } else { db.ref('agenda_tarefas').push(payload); }
     cancelarEdicaoAgenda();
   }
 
   function editarAgenda(key) {
     const item = cacheAgenda[key];
     if (!item) return;
-
     document.getElementById('editAgendaKey').value = key;
     document.getElementById('tDescricao').value = item.descricao || '';
     document.getElementById('tCategoria').value = item.categoria || 'Frota/Transporte';
     document.getElementById('tData').value = item.dataVenc || '';
     document.getElementById('tResponsavel').value = item.responsavel || '';
     document.getElementById('tStatus').value = item.status || 'Pendente';
-
     document.getElementById('titleAgenda').textContent = "📋 Editar Tarefa";
     document.getElementById('btnSalvarAgenda').textContent = "Atualizar Tarefa";
     document.getElementById('btnCancelAgenda').style.display = "inline-block";
@@ -601,8 +610,7 @@
   }
 
   function alternarStatusAgenda(key, statusAtual) {
-    const novoStatus = (statusAtual === 'Concluída') ? 'Pendente' : 'Concluída';
-    db.ref(`agenda_tarefas/${key}`).update({ status: novoStatus });
+    db.ref(`agenda_tarefas/${key}`).update({ status: (statusAtual === 'Concluída') ? 'Pendente' : 'Concluída' });
   }
 
   db.ref('agenda_tarefas').on('value', snapshot => {
@@ -610,32 +618,15 @@
     tbody.innerHTML = '';
     const data = snapshot.val();
     cacheAgenda = data || {};
-
-    if (!data) {
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#777;">Nenhuma tarefa agendada.</td></tr>';
-      return;
-    }
+    if (!data) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#777;">Nenhuma tarefa agendada.</td></tr>'; return; }
 
     Object.keys(data).forEach(key => {
       const item = data[key];
       const diffDias = calcularDiasDiferenca(item.dataVenc);
-      let lembreteBadge = '';
+      let lembreteBadge = item.status === 'Concluída' ? `<span class="badge badge-done">FINALIZADA</span>` :
+        (diffDias > 0 ? `<span class="badge badge-danger">ATRASADO (${diffDias}d)</span>` : (diffDias === 0 ? `<span class="badge badge-alert">VENCE HOJE!</span>` : `<span class="badge badge-ok">Faltam ${Math.abs(diffDias)} dia(s)</span>`));
 
-      if (item.status === 'Concluída') {
-        lembreteBadge = `<span class="badge badge-done">FINALIZADA</span>`;
-      } else {
-        if (diffDias > 0) {
-          lembreteBadge = `<span class="badge badge-danger">ATRASADO (${diffDias}d)</span>`;
-        } else if (diffDias === 0) {
-          lembreteBadge = `<span class="badge badge-alert">VENCE HOJE!</span>`;
-        } else {
-          lembreteBadge = `<span class="badge badge-ok">Faltam ${Math.abs(diffDias)} dia(s)</span>`;
-        }
-      }
-
-      const statusBadge = item.status === 'Concluída' 
-        ? `<span class="badge badge-done">CONCLUÍDA</span>`
-        : (item.status === 'Em Andamento' ? `<span class="badge badge-info">EM ANDAMENTO</span>` : `<span class="badge badge-alert">PENDENTE</span>`);
+      const statusBadge = item.status === 'Concluída' ? `<span class="badge badge-done">CONCLUÍDA</span>` : (item.status === 'Em Andamento' ? `<span class="badge badge-info">EM ANDAMENTO</span>` : `<span class="badge badge-alert">PENDENTE</span>`);
 
       const tr = document.createElement('tr');
       tr.innerHTML = `
@@ -661,15 +652,12 @@
     const modelo = document.getElementById('vModelo').value.trim();
     const placa = document.getElementById('vPlaca').value.trim().toUpperCase();
     const status = document.getElementById('vStatus').value;
-    let dataStatus = document.getElementById('vDataStatus').value;
+    let dataStatus = document.getElementById('vDataStatus').value || new Date().toISOString().split('T')[0];
     const obs = document.getElementById('vObs').value.trim();
 
-    if (!modelo || !placa) { alert('Preencha o Modelo e a Placa!'); return; }
-    if (!dataStatus) { dataStatus = new Date().toISOString().split('T')[0]; }
-
+    if (!modelo || !placa) { alert('Preencha Modelo e Placa!'); return; }
     const payload = { modelo, placa, status, dataStatus, obs };
-    if (key) { db.ref(`veiculos_cadastrados/${key}`).update(payload); } 
-    else { db.ref('veiculos_cadastrados').push(payload); }
+    if (key) { db.ref(`veiculos_cadastrados/${key}`).update(payload); } else { db.ref('veiculos_cadastrados').push(payload); }
     cancelarEdicaoVeiculo();
   }
 
@@ -696,43 +684,35 @@
   }
 
   function alternarStatusVeiculo(key, statusAtual) {
-    const novoStatus = (statusAtual === 'Disponível') ? 'Indisponível' : 'Disponível';
-    db.ref(`veiculos_cadastrados/${key}`).update({ status: novoStatus, dataStatus: new Date().toISOString().split('T')[0] });
+    db.ref(`veiculos_cadastrados/${key}`).update({ status: statusAtual === 'Disponível' ? 'Indisponível' : 'Disponível', dataStatus: new Date().toISOString().split('T')[0] });
   }
 
   db.ref('veiculos_cadastrados').on('value', snapshot => {
     const tbody = document.getElementById('tbVeiculosCadastrados');
     const selectVeiculo = document.getElementById('veiculoSelect');
-    tbody.innerHTML = '';
-    selectVeiculo.innerHTML = '<option value="">Selecione um veículo cadastrado...</option>';
+    tbody.innerHTML = ''; selectVeiculo.innerHTML = '<option value="">Selecione um veículo cadastrado...</option>';
     const data = snapshot.val();
     cacheVeiculos = data || {};
 
-    if (!data) {
-      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#777;">Nenhum veículo cadastrado.</td></tr>';
-      return;
-    }
+    if (!data) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#777;">Nenhum veículo.</td></tr>'; return; }
 
     let disp = 0, indisp = 0, total = 0;
     Object.keys(data).forEach(key => {
       const item = data[key];
       total++;
-      const isDisponivel = (item.status === 'Disponível');
-      if (isDisponivel) disp++; else indisp++;
+      if (item.status === 'Disponível') disp++; else indisp++;
 
       const diff = calcularDiasDiferenca(item.dataStatus);
-      const diasParadoHtml = !isDisponivel ? `<span class="badge badge-danger">${diff} dia(s)</span>` : `-`;
-      const diasDisponivelHtml = isDisponivel ? `<span class="badge badge-ok">${diff} dia(s)</span>` : `-`;
-      const statusBadge = isDisponivel ? '<span class="badge badge-ok">DISPONÍVEL</span>' : '<span class="badge badge-danger">INDISPONÍVEL</span>';
+      const isDisponivel = item.status === 'Disponível';
 
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td><b>${item.modelo}</b></td>
         <td><b>${item.placa}</b></td>
-        <td>${statusBadge}</td>
+        <td><span class="badge ${isDisponivel ? 'badge-ok' : 'badge-danger'}">${item.status.toUpperCase()}</span></td>
         <td>${item.dataStatus ? item.dataStatus.split('-').reverse().join('/') : '-'}</td>
-        <td>${diasParadoHtml}</td>
-        <td>${diasDisponivelHtml}</td>
+        <td>${!isDisponivel ? `<span class="badge badge-danger">${diff} dia(s)</span>` : '-'}</td>
+        <td>${isDisponivel ? `<span class="badge badge-ok">${diff} dia(s)</span>` : '-'}</td>
         <td>${item.obs || '-'}</td>
         <td>
           <button class="btn-warning" onclick="editarVeiculo('${key}')">Editar</button>
@@ -753,7 +733,7 @@
     document.getElementById('kpiTotalFrota').textContent = `${total} veículo(s)`;
   });
 
-  // --- OUTROS MÓDULOS (FINANCEIRO, VIAGENS, MANUTENÇÃO, ESTOQUE, PNEUS) ---
+  // --- FINANCEIRO ---
   function toggleFormaPagamento() {
     document.getElementById('lblDataPagamento').textContent = (document.getElementById('formaPagamento').value === 'PIX') ? 'Data do Pagamento PIX' : 'Data Vencimento Boleto';
   }
@@ -762,12 +742,11 @@
     const key = document.getElementById('editFinanceiroKey').value;
     const numPedido = document.getElementById('numPedido').value;
     const dataEmissao = document.getElementById('dataEmissao').value;
-    const valorRaw = document.getElementById('valorPagamento').value;
-    const valorPagamento = parseValorBR(valorRaw);
+    const valorPagamento = parseValorBR(document.getElementById('valorPagamento').value);
     const formaPagamento = document.getElementById('formaPagamento').value;
     const dataVencimento = document.getElementById('dataVencimento').value;
 
-    if (!numPedido || !dataEmissao || !dataVencimento) { alert('Preencha os campos obrigatórios!'); return; }
+    if (!numPedido || !dataEmissao || !dataVencimento) { alert('Preencha os campos!'); return; }
     const payload = { numPedido, dataEmissao, valorPagamento, formaPagamento, dataVencimento };
     if (key) { db.ref(`financeiro/${key}`).update(payload); } else { db.ref('financeiro').push(payload); }
     cancelarEdicaoFinanceiro();
@@ -822,6 +801,7 @@
     });
   });
 
+  // --- VIAGENS / SAÍDAS (AGRUPADO POR SEMANA E PLACA) ---
   function addViagem() {
     const key = document.getElementById('editViagemKey').value;
     const veiculo = document.getElementById('veiculoSelect').value;
@@ -859,42 +839,97 @@
     tbody.innerHTML = ''; driverSummary.innerHTML = '';
     const data = snapshot.val();
     cacheViagens = data || {};
-    if (!data) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#777;">Nenhuma viagem.</td></tr>'; return; }
+
+    if (!data) { 
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#777;">Nenhuma viagem registrada.</td></tr>'; 
+      return; 
+    }
+
     const motoristaContagem = {};
     const hojeStr = new Date().toISOString().split('T')[0];
 
+    // Estrutura de Agrupamento: Semanas -> Placas -> Registros
+    const semanasMap = {};
+
     Object.keys(data).forEach(key => {
       const item = data[key];
-      if (item.dataSaida <= hojeStr) { motoristaContagem[item.motorista.trim()] = (motoristaContagem[item.motorista.trim()] || 0) + 1; }
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td><b>${item.veiculo}</b></td>
-        <td>${item.motorista}</td>
-        <td>${item.dataSaida.split('-').reverse().join('/')}</td>
-        <td>
-          <button class="btn-warning" onclick="editarViagem('${key}')">Editar</button>
-          <button class="btn-danger" onclick="removerItem('viagens', '${key}')">Excluir</button>
-        </td>
-      `;
-      tbody.appendChild(tr);
+      item.key = key;
+
+      if (item.dataSaida <= hojeStr) {
+        motoristaContagem[item.motorista.trim()] = (motoristaContagem[item.motorista.trim()] || 0) + 1;
+      }
+
+      const semanaInfo = getSemanaInfo(item.dataSaida);
+      if (!semanasMap[semanaInfo.chave]) {
+        semanasMap[semanaInfo.chave] = { texto: semanaInfo.texto, placasMap: {} };
+      }
+
+      const placaVeiculo = item.veiculo || 'Veículo Não Identificado';
+      if (!semanasMap[semanaInfo.chave].placasMap[placaVeiculo]) {
+        semanasMap[semanaInfo.chave].placasMap[placaVeiculo] = [];
+      }
+
+      semanasMap[semanaInfo.chave].placasMap[placaVeiculo].push(item);
     });
 
+    // Renderizar resumo dos motoristas
     Object.keys(motoristaContagem).forEach(nome => {
       const card = document.createElement('div');
       card.className = 'driver-card';
       card.innerHTML = `<span class="driver-name">${nome}</span><span class="driver-count">${motoristaContagem[nome]} saída(s)</span>`;
       driverSummary.appendChild(card);
     });
+
+    // Ordenar as semanas (mais recentes primeiro)
+    const semanasOrdenadas = Object.keys(semanasMap).sort().reverse();
+
+    semanasOrdenadas.forEach(semChave => {
+      const semObj = semanasMap[semChave];
+
+      // Linha do Cabeçalho da Semana
+      const trSemana = document.createElement('tr');
+      trSemana.innerHTML = `<td colspan="4" class="week-header">🗓️ ${semObj.texto}</td>`;
+      tbody.appendChild(trSemana);
+
+      // Ordenar as placas dentro da semana
+      const placasOrdenadas = Object.keys(semObj.placasMap).sort();
+
+      placasOrdenadas.forEach(placa => {
+        const listaViagens = semObj.placasMap[placa];
+
+        // Linha do Cabeçalho da Placa
+        const trPlaca = document.createElement('tr');
+        trPlaca.innerHTML = `<td colspan="4" class="plate-header">🚛 <b>${placa}</b> &nbsp;—&nbsp; <small>(${listaViagens.length} saída(s) nesta semana)</small></td>`;
+        tbody.appendChild(trPlaca);
+
+        // Ordenar viagens da placa por data
+        listaViagens.sort((a,b) => b.dataSaida.localeCompare(a.dataSaida));
+
+        listaViagens.forEach(item => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td style="padding-left: 25px;">${item.veiculo}</td>
+            <td>${item.motorista}</td>
+            <td>${item.dataSaida.split('-').reverse().join('/')}</td>
+            <td>
+              <button class="btn-warning" onclick="editarViagem('${item.key}')">Editar</button>
+              <button class="btn-danger" onclick="removerItem('viagens', '${item.key}')">Excluir</button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      });
+    });
   });
 
+  // --- MANUTENÇÃO ---
   function addManutencao() {
     const key = document.getElementById('editManutencaoKey').value;
     const veiculo = document.getElementById('mVeiculo').value.trim();
     const dataRealizada = document.getElementById('mDataRealizada').value;
     const servico = document.getElementById('mServico').value;
     const peças = document.getElementById('mPeças').value;
-    const custoRaw = document.getElementById('mCusto').value;
-    const custo = parseValorBR(custoRaw);
+    const custo = parseValorBR(document.getElementById('mCusto').value);
     const kmAtual = parseInt(document.getElementById('mKmAtual').value);
     const kmProxima = parseInt(document.getElementById('mKmProxima').value);
     const dataProxima = document.getElementById('mDataProxima').value;
@@ -954,6 +989,7 @@
     });
   });
 
+  // --- ESTOQUE DE PEÇAS ---
   function addEstoque() {
     const key = document.getElementById('editEstoqueKey').value;
     const nome = document.getElementById('pNome').value.trim();
@@ -1012,6 +1048,7 @@
     });
   });
 
+  // --- PNEUS E FREIOS ---
   function addPneusFreios() {
     const key = document.getElementById('editPneusKey').value;
     const veiculo = document.getElementById('pfVeiculo').value.trim();
