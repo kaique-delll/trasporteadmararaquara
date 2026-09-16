@@ -168,7 +168,7 @@
           </div>
           <div class="form-group">
             <label>Valor Total (R$)</label>
-            <input type="number" step="0.01" id="valorPagamento" placeholder="Ex: 1500.00" required>
+            <input type="text" id="valorPagamento" placeholder="Ex: 1500,00 ou 1.500,00" required>
           </div>
           <div class="form-group">
             <label>Forma de Pagamento</label>
@@ -289,7 +289,7 @@
           </div>
           <div class="form-group">
             <label>Custo Total (R$)</label>
-            <input type="number" step="0.01" id="mCusto" placeholder="Ex: 850.00" required>
+            <input type="text" id="mCusto" placeholder="Ex: 1960 ou 1.960,00" required>
           </div>
           <div class="form-group">
             <label>KM Atual</label>
@@ -518,6 +518,23 @@
   // Cache para edição
   let cacheVeiculos = {}, cacheFinanceiro = {}, cacheViagens = {}, cacheManutencoes = {}, cacheEstoque = {}, cachePneus = {}, cacheAgenda = {};
 
+  // Funções para conversão e formatação monetária segura em R$
+  function parseValorBR(val) {
+    if (!val) return 0;
+    if (typeof val === 'number') return val;
+    let s = val.toString().trim();
+    if (s.includes(',')) {
+      s = s.replace(/\./g, '').replace(',', '.');
+    }
+    const n = parseFloat(s);
+    return isNaN(n) ? 0 : n;
+  }
+
+  function formatarMoeda(val) {
+    const num = parseValorBR(val);
+    return num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
   // Funções de Abas
   function switchTab(tabId, btn) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -745,7 +762,8 @@
     const key = document.getElementById('editFinanceiroKey').value;
     const numPedido = document.getElementById('numPedido').value;
     const dataEmissao = document.getElementById('dataEmissao').value;
-    const valorPagamento = parseFloat(document.getElementById('valorPagamento').value) || 0;
+    const valorRaw = document.getElementById('valorPagamento').value;
+    const valorPagamento = parseValorBR(valorRaw);
     const formaPagamento = document.getElementById('formaPagamento').value;
     const dataVencimento = document.getElementById('dataVencimento').value;
 
@@ -761,7 +779,7 @@
     document.getElementById('editFinanceiroKey').value = key;
     document.getElementById('numPedido').value = item.numPedido || '';
     document.getElementById('dataEmissao').value = item.dataEmissao || '';
-    document.getElementById('valorPagamento').value = item.valorPagamento || '';
+    document.getElementById('valorPagamento').value = item.valorPagamento ? formatarMoeda(item.valorPagamento) : '';
     document.getElementById('formaPagamento').value = item.formaPagamento || 'Boleto';
     document.getElementById('dataVencimento').value = item.dataVencimento || '';
     toggleFormaPagamento();
@@ -784,14 +802,14 @@
     tbody.innerHTML = '';
     const data = snapshot.val();
     cacheFinanceiro = data || {};
-    if (!data) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#777;">Nenum lançamento.</td></tr>'; return; }
+    if (!data) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#777;">Nenhum lançamento.</td></tr>'; return; }
     Object.keys(data).forEach(key => {
       const item = data[key];
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td><b>${item.numPedido}</b></td>
         <td>${item.dataEmissao.split('-').reverse().join('/')}</td>
-        <td><b>R$ ${Number(item.valorPagamento || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</b></td>
+        <td><b>R$ ${formatarMoeda(item.valorPagamento)}</b></td>
         <td><span class="badge ${item.formaPagamento === 'PIX' ? 'badge-ok' : 'badge-info'}">${item.formaPagamento}</span></td>
         <td>${item.dataVencimento ? item.dataVencimento.split('-').reverse().join('/') : 'N/A'}</td>
         <td><span class="badge badge-ok">EM DIA</span></td>
@@ -875,7 +893,8 @@
     const dataRealizada = document.getElementById('mDataRealizada').value;
     const servico = document.getElementById('mServico').value;
     const peças = document.getElementById('mPeças').value;
-    const custo = parseFloat(document.getElementById('mCusto').value) || 0;
+    const custoRaw = document.getElementById('mCusto').value;
+    const custo = parseValorBR(custoRaw);
     const kmAtual = parseInt(document.getElementById('mKmAtual').value);
     const kmProxima = parseInt(document.getElementById('mKmProxima').value);
     const dataProxima = document.getElementById('mDataProxima').value;
@@ -893,7 +912,7 @@
     document.getElementById('mDataRealizada').value = item.dataRealizada || '';
     document.getElementById('mServico').value = item.servico || '';
     document.getElementById('mPeças').value = item.peças || '';
-    document.getElementById('mCusto').value = item.custo || '';
+    document.getElementById('mCusto').value = item.custo ? formatarMoeda(item.custo) : '';
     document.getElementById('mKmAtual').value = item.kmAtual || '';
     document.getElementById('mKmProxima').value = item.kmProxima || '';
     document.getElementById('mDataProxima').value = item.dataProxima || '';
@@ -922,7 +941,7 @@
       tr.innerHTML = `
         <td><b>${item.veiculo}</b></td>
         <td><b>${item.servico}</b><br><small>${item.peças}</small></td>
-        <td>R$ ${Number(item.custo).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+        <td>R$ ${formatarMoeda(item.custo)}</td>
         <td>${item.dataRealizada.split('-').reverse().join('/')}</td>
         <td>${item.kmAtual} KM</td>
         <td><b>${item.kmProxima} KM</b><br><small>${item.dataProxima.split('-').reverse().join('/')}</small></td>
