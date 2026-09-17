@@ -437,6 +437,63 @@
         </tbody>
       </table>
     </div>
+
+    <!-- 7. DESCARTE DE PNEUS -->
+    <div class="card">
+      <h2 id="titleDescartePneus">7. Registro de Descarte de Pneus</h2>
+      <form id="descartePneusForm">
+        <input type="hidden" id="editDescartePneuKey">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Veículo / Pneu / Modelo</label>
+            <input type="text" id="dpPneu" placeholder="Ex: Pneu 215/75 R17.5 (Iveco SHW9I57)" required>
+          </div>
+          <div class="form-group">
+            <label>Quantidade</label>
+            <input type="number" id="dpQtd" min="1" value="1" required>
+          </div>
+          <div class="form-group">
+            <label>Motivo do Descarte</label>
+            <select id="dpMotivo">
+              <option value="Desgastado (Careca)">Desgastado (Careca)</option>
+              <option value="Bolha / Avaria Lateral">Bolha / Avaria Lateral</option>
+              <option value="Furo Irreparável">Furo Irreparável</option>
+              <option value="Deformação / Defeito">Deformação / Defeito</option>
+              <option value="Outro">Outro</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Data do Descarte</label>
+            <input type="date" id="dpData" required>
+          </div>
+          <div class="form-group">
+            <label>Destino / Empresa de Reciclagem</label>
+            <input type="text" id="dpDestino" placeholder="Ex: Recicladora X / Ponto de Coleta">
+          </div>
+        </div>
+        <button type="button" id="btnSalvarDescartePneu" onclick="addDescartePneu()">Registrar Descarte</button>
+        <button type="button" id="btnCancelDescartePneu" class="btn-cancel" onclick="cancelarEdicaoDescartePneu()" style="display:none;">Cancelar Edição</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Histórico de Descarte de Pneus</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Pneu / Veículo</th>
+            <th>Qtd</th>
+            <th>Motivo</th>
+            <th>Data Descarte</th>
+            <th>Destino / Reciclagem</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tbDescartePneus">
+          <tr><td colspan="6" style="text-align:center; color:#777;">Carregando descartes...</td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 
   <!-- ABA 2: AGENDA DE TAREFAS E LEMBRETES -->
@@ -519,7 +576,7 @@
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
 
-  let cacheVeiculos = {}, cacheFinanceiro = {}, cacheViagens = {}, cacheManutencoes = {}, cacheEstoque = {}, cachePneus = {}, cacheAgenda = {};
+  let cacheVeiculos = {}, cacheFinanceiro = {}, cacheViagens = {}, cacheManutencoes = {}, cacheEstoque = {}, cachePneus = {}, cacheAgenda = {}, cacheDescartePneus = {};
 
   function parseValorBR(val) {
     if (!val) return 0;
@@ -551,17 +608,12 @@
     return Math.floor(diffTime / (1000 * 60 * 60 * 24));
   }
 
-  // Função para obter o intervalo da semana de uma data (Ex: 14/09 a 20/09)
   function getSemanaInfo(dataStr) {
     if (!dataStr) return { chave: "Sem Data", texto: "Data Não Definida" };
     const dt = new Date(dataStr + 'T00:00:00');
-    const day = dt.getDay(); // 0: Dom, 1: Seg...
-    
-    // Início na Segunda-feira
+    const day = dt.getDay();
     const seg = new Date(dt);
     seg.setDate(dt.getDate() - (day === 0 ? 6 : day - 1));
-    
-    // Fim no Domingo
     const dom = new Date(seg);
     dom.setDate(seg.getDate() + 6);
 
@@ -572,7 +624,7 @@
     return { chave, texto };
   }
 
-  // --- ABA AGENDA DE TAREFAS ---
+  // --- AGENDA DE TAREFAS ---
   function addAgenda() {
     const key = document.getElementById('editAgendaKey').value;
     const descricao = document.getElementById('tDescricao').value.trim();
@@ -801,7 +853,7 @@
     });
   });
 
-  // --- VIAGENS / SAÍDAS (AGRUPADO POR SEMANA E PLACA) ---
+  // --- VIAGENS / SAÍDAS ---
   function addViagem() {
     const key = document.getElementById('editViagemKey').value;
     const veiculo = document.getElementById('veiculoSelect').value;
@@ -840,15 +892,10 @@
     const data = snapshot.val();
     cacheViagens = data || {};
 
-    if (!data) { 
-      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#777;">Nenhuma viagem registrada.</td></tr>'; 
-      return; 
-    }
+    if (!data) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#777;">Nenhuma viagem registrada.</td></tr>'; return; }
 
     const motoristaContagem = {};
     const hojeStr = new Date().toISOString().split('T')[0];
-
-    // Estrutura de Agrupamento: Semanas -> Placas -> Registros
     const semanasMap = {};
 
     Object.keys(data).forEach(key => {
@@ -860,19 +907,14 @@
       }
 
       const semanaInfo = getSemanaInfo(item.dataSaida);
-      if (!semanasMap[semanaInfo.chave]) {
-        semanasMap[semanaInfo.chave] = { texto: semanaInfo.texto, placasMap: {} };
-      }
+      if (!semanasMap[semanaInfo.chave]) { semanasMap[semanaInfo.chave] = { texto: semanaInfo.texto, placasMap: {} }; }
 
       const placaVeiculo = item.veiculo || 'Veículo Não Identificado';
-      if (!semanasMap[semanaInfo.chave].placasMap[placaVeiculo]) {
-        semanasMap[semanaInfo.chave].placasMap[placaVeiculo] = [];
-      }
+      if (!semanasMap[semanaInfo.chave].placasMap[placaVeiculo]) { semanasMap[semanaInfo.chave].placasMap[placaVeiculo] = []; }
 
       semanasMap[semanaInfo.chave].placasMap[placaVeiculo].push(item);
     });
 
-    // Renderizar resumo dos motoristas
     Object.keys(motoristaContagem).forEach(nome => {
       const card = document.createElement('div');
       card.className = 'driver-card';
@@ -880,31 +922,21 @@
       driverSummary.appendChild(card);
     });
 
-    // Ordenar as semanas (mais recentes primeiro)
     const semanasOrdenadas = Object.keys(semanasMap).sort().reverse();
-
     semanasOrdenadas.forEach(semChave => {
       const semObj = semanasMap[semChave];
-
-      // Linha do Cabeçalho da Semana
       const trSemana = document.createElement('tr');
       trSemana.innerHTML = `<td colspan="4" class="week-header">🗓️ ${semObj.texto}</td>`;
       tbody.appendChild(trSemana);
 
-      // Ordenar as placas dentro da semana
       const placasOrdenadas = Object.keys(semObj.placasMap).sort();
-
       placasOrdenadas.forEach(placa => {
         const listaViagens = semObj.placasMap[placa];
-
-        // Linha do Cabeçalho da Placa
         const trPlaca = document.createElement('tr');
         trPlaca.innerHTML = `<td colspan="4" class="plate-header">🚛 <b>${placa}</b> &nbsp;—&nbsp; <small>(${listaViagens.length} saída(s) nesta semana)</small></td>`;
         tbody.appendChild(trPlaca);
 
-        // Ordenar viagens da placa por data
         listaViagens.sort((a,b) => b.dataSaida.localeCompare(a.dataSaida));
-
         listaViagens.forEach(item => {
           const tr = document.createElement('tr');
           tr.innerHTML = `
@@ -1101,6 +1133,75 @@
         <td>
           <button class="btn-warning" onclick="editarPneusFreios('${key}')">Editar</button>
           <button class="btn-danger" onclick="removerItem('pneus_freios', '${key}')">Excluir</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  });
+
+  // --- 7. DESCARTE DE PNEUS ---
+  function addDescartePneu() {
+    const key = document.getElementById('editDescartePneuKey').value;
+    const pneu = document.getElementById('dpPneu').value.trim();
+    const qtd = parseInt(document.getElementById('dpQtd').value) || 1;
+    const motivo = document.getElementById('dpMotivo').value;
+    const dataDescarte = document.getElementById('dpData').value;
+    const destino = document.getElementById('dpDestino').value.trim();
+
+    if (!pneu || !dataDescarte) { alert('Preencha os campos obrigatórios do descarte!'); return; }
+    const payload = { pneu, qtd, motivo, dataDescarte, destino };
+
+    if (key) { db.ref(`descarte_pneus/${key}`).update(payload); } 
+    else { db.ref('descarte_pneus').push(payload); }
+    cancelarEdicaoDescartePneu();
+  }
+
+  function editarDescartePneu(key) {
+    const item = cacheDescartePneus[key];
+    if (!item) return;
+    document.getElementById('editDescartePneuKey').value = key;
+    document.getElementById('dpPneu').value = item.pneu || '';
+    document.getElementById('dpQtd').value = item.qtd || 1;
+    document.getElementById('dpMotivo').value = item.motivo || 'Desgastado (Careca)';
+    document.getElementById('dpData').value = item.dataDescarte || '';
+    document.getElementById('dpDestino').value = item.destino || '';
+
+    document.getElementById('titleDescartePneus').textContent = "7. Editar Descarte de Pneu";
+    document.getElementById('btnSalvarDescartePneu').textContent = "Atualizar Registro";
+    document.getElementById('btnCancelDescartePneu').style.display = "inline-block";
+  }
+
+  function cancelarEdicaoDescartePneu() {
+    document.getElementById('editDescartePneuKey').value = '';
+    document.getElementById('descartePneusForm').reset();
+    document.getElementById('titleDescartePneus').textContent = "7. Registro de Descarte de Pneus";
+    document.getElementById('btnSalvarDescartePneu').textContent = "Registrar Descarte";
+    document.getElementById('btnCancelDescartePneu').style.display = "none";
+  }
+
+  db.ref('descarte_pneus').on('value', snapshot => {
+    const tbody = document.getElementById('tbDescartePneus');
+    tbody.innerHTML = '';
+    const data = snapshot.val();
+    cacheDescartePneus = data || {};
+
+    if (!data) { 
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#777;">Nenhum descarte registrado.</td></tr>'; 
+      return; 
+    }
+
+    Object.keys(data).forEach(key => {
+      const item = data[key];
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><b>${item.pneu}</b></td>
+        <td><b>${item.qtd} un.</b></td>
+        <td><span class="badge badge-danger">${item.motivo}</span></td>
+        <td>${item.dataDescarte ? item.dataDescarte.split('-').reverse().join('/') : '-'}</td>
+        <td>${item.destino || '-'}</td>
+        <td>
+          <button class="btn-warning" onclick="editarDescartePneu('${key}')">Editar</button>
+          <button class="btn-danger" onclick="removerItem('descarte_pneus', '${key}')">Excluir</button>
         </td>
       `;
       tbody.appendChild(tr);
