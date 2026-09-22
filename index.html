@@ -62,10 +62,6 @@
     .driver-card { background: #f8f9fa; border: 1px solid #e2e8f0; border-left: 4px solid #27ae60; padding: 10px 15px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
     .driver-name { font-weight: bold; color: #2c3e50; font-size: 14px; }
     .driver-count { background: #27ae60; color: white; padding: 3px 10px; border-radius: 12px; font-weight: bold; font-size: 12px; }
-
-    /* CABEÇALHOS DE GRUPO POR SEMANA E PLACA */
-    .week-header { background-color: #34495e !important; color: #fff !important; font-size: 14px; font-weight: bold; }
-    .plate-header { background-color: #eaeded !important; color: #2c3e50 !important; font-size: 12px; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -249,18 +245,18 @@
     </div>
 
     <div class="card">
-      <h2>Histórico de Viagens e Saídas (Organizado por Semana e Placa)</h2>
+      <h2>📊 Relatório Consolidado de Saídas por Veículo</h2>
       <table>
         <thead>
           <tr>
             <th>Veículo / Placa</th>
-            <th>Motorista</th>
-            <th>Data de Saída</th>
+            <th>Total Geral de Saídas</th>
+            <th>Motoristas Responsáveis</th>
             <th>Ações</th>
           </tr>
         </thead>
         <tbody id="tbViagens">
-          <tr><td colspan="4" style="text-align:center; color:#777;">Carregando histórico...</td></tr>
+          <tr><td colspan="4" style="text-align:center; color:#777;">Carregando relatório...</td></tr>
         </tbody>
       </table>
     </div>
@@ -675,23 +671,6 @@
     return Math.floor(diffTime / (1000 * 60 * 60 * 24));
   }
 
-  function getSemanaInfo(dataStr) {
-    if (!dataStr) return { chave: "Sem Data", texto: "Data Não Definida" };
-    const dt = new Date(dataStr + 'T00:00:00');
-    const day = dt.getDay();
-    const seg = new Date(dt);
-    seg.setDate(dt.getDate() - (day === 0 ? 6 : day - 1));
-    const dom = new Date(seg);
-    dom.setDate(seg.getDate() + 6);
-
-    const formatar = (d) => String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
-    const chave = seg.toISOString().split('T')[0];
-    const texto = `Semana de ${formatar(seg)} até ${formatar(dom)}`;
-
-    return { chave, texto };
-  }
-
-  // Define mês atual como padrão na importação
   document.addEventListener('DOMContentLoaded', () => {
     const hojeMes = new Date().toISOString().substring(0, 7);
     document.getElementById('impMesAno').value = hojeMes;
@@ -725,7 +704,6 @@
       let totalEntregas = 0;
       const registros = [];
 
-      // Procura colunas por palavras-chave flexíveis
       const headers = jsonData[0].map(h => String(h || '').toLowerCase().trim());
       const colData = headers.findIndex(h => h.includes('data'));
       const colVeiculo = headers.findIndex(h => h.includes('veiculo') || h.includes('placa') || h.includes('carro'));
@@ -808,7 +786,7 @@
       return;
     }
 
-    lista.forEach((item, index) => {
+    lista.forEach((item) => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td><b>${item.data}</b></td>
@@ -1058,7 +1036,7 @@
     });
   });
 
-  // --- VIAGENS / SAÍDAS ---
+  // --- VIAGENS / SAÍDAS (CONSOLIDADO ÚNICO POR VEÍCULO) ---
   function addViagem() {
     const key = document.getElementById('editViagemKey').value;
     const veiculo = document.getElementById('veiculoSelect').value;
@@ -1068,18 +1046,6 @@
     const payload = { veiculo, motorista, dataSaida };
     if (key) { db.ref(`viagens/${key}`).update(payload); } else { db.ref('viagens').push(payload); }
     cancelarEdicaoViagem();
-  }
-
-  function editarViagem(key) {
-    const item = cacheViagens[key];
-    if (!item) return;
-    document.getElementById('editViagemKey').value = key;
-    document.getElementById('veiculoSelect').value = item.veiculo || '';
-    document.getElementById('motorista').value = item.motorista || '';
-    document.getElementById('dataSaida').value = item.dataSaida || '';
-    document.getElementById('titleViagem').textContent = "3. Editar Saída";
-    document.getElementById('btnSalvarViagem').textContent = "Atualizar Saída";
-    document.getElementById('btnCancelViagem').style.display = "inline-block";
   }
 
   function cancelarEdicaoViagem() {
@@ -1097,11 +1063,14 @@
     const data = snapshot.val();
     cacheViagens = data || {};
 
-    if (!data) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#777;">Nenhuma viagem registrada.</td></tr>'; return; }
+    if (!data) { 
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#777;">Nenhuma saída registrada.</td></tr>'; 
+      return; 
+    }
 
     const motoristaContagem = {};
     const hojeStr = new Date().toISOString().split('T')[0];
-    const semanasMap = {};
+    const relatorioVeiculos = {};
 
     Object.keys(data).forEach(key => {
       const item = data[key];
@@ -1111,13 +1080,18 @@
         motoristaContagem[item.motorista.trim()] = (motoristaContagem[item.motorista.trim()] || 0) + 1;
       }
 
-      const semanaInfo = getSemanaInfo(item.dataSaida);
-      if (!semanasMap[semanaInfo.chave]) { semanasMap[semanaInfo.chave] = { texto: semanaInfo.texto, placasMap: {} }; }
+      const veiculoNome = item.veiculo || 'Veículo Não Identificado';
+      if (!relatorioVeiculos[veiculoNome]) {
+        relatorioVeiculos[veiculoNome] = {
+          totalSaidas: 0,
+          motoristasSet: new Set(),
+          chaves: []
+        };
+      }
 
-      const placaVeiculo = item.veiculo || 'Veículo Não Identificado';
-      if (!semanasMap[semanaInfo.chave].placasMap[placaVeiculo]) { semanasMap[semanaInfo.chave].placasMap[placaVeiculo] = []; }
-
-      semanasMap[semanaInfo.chave].placasMap[placaVeiculo].push(item);
+      relatorioVeiculos[veiculoNome].totalSaidas += 1;
+      relatorioVeiculos[veiculoNome].motoristasSet.add(item.motorista);
+      relatorioVeiculos[veiculoNome].chaves.push(key);
     });
 
     Object.keys(motoristaContagem).forEach(nome => {
@@ -1127,37 +1101,34 @@
       driverSummary.appendChild(card);
     });
 
-    const semanasOrdenadas = Object.keys(semanasMap).sort().reverse();
-    semanasOrdenadas.forEach(semChave => {
-      const semObj = semanasMap[semChave];
-      const trSemana = document.createElement('tr');
-      trSemana.innerHTML = `<td colspan="4" class="week-header">🗓️ ${semObj.texto}</td>`;
-      tbody.appendChild(trSemana);
+    const veiculosOrdenados = Object.keys(relatorioVeiculos).sort();
 
-      const placasOrdenadas = Object.keys(semObj.placasMap).sort();
-      placasOrdenadas.forEach(placa => {
-        const listaViagens = semObj.placasMap[placa];
-        const trPlaca = document.createElement('tr');
-        trPlaca.innerHTML = `<td colspan="4" class="plate-header">🚛 <b>${placa}</b> &nbsp;—&nbsp; <small>(${listaViagens.length} saída(s) nesta semana)</small></td>`;
-        tbody.appendChild(trPlaca);
+    veiculosOrdenados.forEach(veiculo => {
+      const info = relatorioVeiculos[veiculo];
+      const listaMotoristas = Array.from(info.motoristasSet).join(', ');
 
-        listaViagens.sort((a,b) => b.dataSaida.localeCompare(a.dataSaida));
-        listaViagens.forEach(item => {
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td style="padding-left: 25px;">${item.veiculo}</td>
-            <td>${item.motorista}</td>
-            <td>${item.dataSaida.split('-').reverse().join('/')}</td>
-            <td>
-              <button class="btn-warning" onclick="editarViagem('${item.key}')">Editar</button>
-              <button class="btn-danger" onclick="removerItem('viagens', '${item.key}')">Excluir</button>
-            </td>
-          `;
-          tbody.appendChild(tr);
-        });
-      });
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><b>${veiculo}</b></td>
+        <td><span class="badge badge-info" style="font-size:13px; padding:6px 12px;">${info.totalSaidas} saída(s) registrada(s)</span></td>
+        <td>${listaMotoristas || '-'}</td>
+        <td>
+          <button class="btn-danger" onclick="limparSaidasVeiculo('${veiculo}')">Limpar Saídas</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
     });
   });
+
+  function limparSaidasVeiculo(veiculoNome) {
+    if (confirm(`Tem certeza que deseja excluir todas as saídas registradas para o veículo ${veiculoNome}?`)) {
+      Object.keys(cacheViagens).forEach(key => {
+        if (cacheViagens[key].veiculo === veiculoNome) {
+          db.ref(`viagens/${key}`).remove();
+        }
+      });
+    }
+  }
 
   // --- MANUTENÇÃO ---
   function addManutencao() {
