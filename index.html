@@ -18,6 +18,8 @@
     h1, h2, h3 { margin-bottom: 15px; color: #1a252f; }
     .container { max-width: 1200px; margin: 0 auto; }
     
+    .header-bar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 20px; gap: 15px; }
+    
     /* NAVEGAÇÃO DE ABAS */
     .nav-tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #ccc; padding-bottom: 5px; flex-wrap: wrap; }
     .tab-btn { background: #e0e0e0; color: #333; border: none; padding: 12px 20px; font-weight: bold; font-size: 14px; border-radius: 6px 6px 0 0; cursor: pointer; }
@@ -34,6 +36,8 @@
     button:hover { background: #219150; }
     .btn-danger { background: #e74c3c; margin-top: 0; padding: 4px 8px; font-size: 12px; }
     .btn-danger:hover { background: #c0392b; }
+    .btn-danger-master { background: #c0392b; color: white; font-size: 13px; padding: 8px 15px; border-radius: 4px; font-weight: bold; border: none; cursor: pointer; }
+    .btn-danger-master:hover { background: #900c3f; }
     .btn-warning { background: #f39c12; margin-top: 0; padding: 4px 8px; font-size: 12px; margin-right: 5px; color: white; }
     .btn-warning:hover { background: #d68910; }
     .btn-toggle { background: #2980b9; margin-top: 0; padding: 4px 8px; font-size: 12px; margin-right: 5px; color: white; }
@@ -56,7 +60,7 @@
     .kpi-card p { font-size: 20px; font-weight: bold; color: #2c3e50; margin-top: 5px; }
     .kpi-warning { border-left-color: #e74c3c; }
     .kpi-success { border-left-color: #27ae60; }
-    .sync-status { display: inline-block; padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-left: 15px; background: #27ae60; color: white; }
+    .sync-status { display: inline-block; padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-left: 10px; background: #27ae60; color: white; }
     
     .driver-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-top: 10px; }
     .driver-card { background: #f8f9fa; border: 1px solid #e2e8f0; border-left: 4px solid #27ae60; padding: 10px 15px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
@@ -67,10 +71,13 @@
 <body>
 
 <div class="container">
-  <h1>
-    Painel Integrado de Gestão
-    <span class="sync-status">🟢 Nuvem Sincronizada</span>
-  </h1>
+  <div class="header-bar">
+    <h1>
+      Painel Integrado de Gestão
+      <span class="sync-status">🟢 Nuvem Sincronizada</span>
+    </h1>
+    <button class="btn-danger-master" onclick="excluirTudoBancoDados()">⚠️ EXCLUIR TUDO (LIMPAR BANCO DE DADOS)</button>
+  </div>
 
   <!-- NAVEGAÇÃO ENTRE ABAS -->
   <div class="nav-tabs">
@@ -669,6 +676,22 @@
     const dt = new Date(dataStr + 'T00:00:00');
     const diffTime = hoje - dt;
     return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  }
+
+  // FUNÇÃO EXCLUIR TUDO (LIMPAR BANCO DE DADOS COMPLETO)
+  function excluirTudoBancoDados() {
+    if (confirm("⚠️ ATENÇÃO: Deseja realmente APAGAR TODOS OS DADOS do banco de dados?\nEsta ação não poderá ser desfeita!")) {
+      if (confirm("🚨 ÚLTIMA CONFIRMAÇÃO: Confirmar a exclusão TOTAL de veículos, saídas, manutenções, estoque, financeiro, tarefas e planilhas?")) {
+        db.ref().remove()
+          .then(() => {
+            alert("✅ Todos os dados foram apagados com sucesso!");
+            window.location.reload();
+          })
+          .catch(error => {
+            alert("Erro ao excluir dados: " + error.message);
+          });
+      }
+    }
   }
 
   document.addEventListener('DOMContentLoaded', () => {
