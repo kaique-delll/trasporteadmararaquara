@@ -36,8 +36,6 @@
     button:hover { background: #219150; }
     .btn-danger { background: #e74c3c; margin-top: 0; padding: 4px 8px; font-size: 12px; }
     .btn-danger:hover { background: #c0392b; }
-    .btn-danger-master { background: #c0392b; color: white; font-size: 13px; padding: 8px 15px; border-radius: 4px; font-weight: bold; border: none; cursor: pointer; }
-    .btn-danger-master:hover { background: #900c3f; }
     .btn-warning { background: #f39c12; margin-top: 0; padding: 4px 8px; font-size: 12px; margin-right: 5px; color: white; }
     .btn-warning:hover { background: #d68910; }
     .btn-toggle { background: #2980b9; margin-top: 0; padding: 4px 8px; font-size: 12px; margin-right: 5px; color: white; }
@@ -66,6 +64,8 @@
     .driver-card { background: #f8f9fa; border: 1px solid #e2e8f0; border-left: 4px solid #27ae60; padding: 10px 15px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
     .driver-name { font-weight: bold; color: #2c3e50; font-size: 14px; }
     .driver-count { background: #27ae60; color: white; padding: 3px 10px; border-radius: 12px; font-weight: bold; font-size: 12px; }
+    
+    .card-header-flex { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
   </style>
 </head>
 <body>
@@ -76,7 +76,6 @@
       Painel Integrado de Gestão
       <span class="sync-status">🟢 Nuvem Sincronizada</span>
     </h1>
-    <button class="btn-danger-master" onclick="excluirTudoBancoDados()">⚠️ EXCLUIR TUDO (LIMPAR BANCO DE DADOS)</button>
   </div>
 
   <!-- NAVEGAÇÃO ENTRE ABAS -->
@@ -252,7 +251,10 @@
     </div>
 
     <div class="card">
-      <h2>📊 Relatório Consolidado de Saídas por Veículo</h2>
+      <div class="card-header-flex">
+        <h2>📊 Relatório Consolidado de Saídas por Veículo</h2>
+        <button class="btn-danger" style="padding: 6px 12px; font-size:13px;" onclick="excluirTodasSaidas()">🗑️ Excluir TODAS as Saídas</button>
+      </div>
       <table>
         <thead>
           <tr>
@@ -676,22 +678,6 @@
     const dt = new Date(dataStr + 'T00:00:00');
     const diffTime = hoje - dt;
     return Math.floor(diffTime / (1000 * 60 * 60 * 24));
-  }
-
-  // FUNÇÃO EXCLUIR TUDO (LIMPAR BANCO DE DADOS COMPLETO)
-  function excluirTudoBancoDados() {
-    if (confirm("⚠️ ATENÇÃO: Deseja realmente APAGAR TODOS OS DADOS do banco de dados?\nEsta ação não poderá ser desfeita!")) {
-      if (confirm("🚨 ÚLTIMA CONFIRMAÇÃO: Confirmar a exclusão TOTAL de veículos, saídas, manutenções, estoque, financeiro, tarefas e planilhas?")) {
-        db.ref().remove()
-          .then(() => {
-            alert("✅ Todos os dados foram apagados com sucesso!");
-            window.location.reload();
-          })
-          .catch(error => {
-            alert("Erro ao excluir dados: " + error.message);
-          });
-      }
-    }
   }
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -1150,6 +1136,14 @@
           db.ref(`viagens/${key}`).remove();
         }
       });
+    }
+  }
+
+  function excluirTodasSaidas() {
+    if (confirm("⚠️ Deseja realmente excluir TODAS as saídas/viagens registradas de todos os veículos?")) {
+      db.ref('viagens').remove()
+        .then(() => alert("✅ Todas as saídas foram excluídas com sucesso!"))
+        .catch(err => alert("Erro ao excluir saídas: " + err.message));
     }
   }
 
