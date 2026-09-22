@@ -9,6 +9,9 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
+  <!-- SheetJS para leitura de planilhas Excel/CSV -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
   <style>
     * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
     body { background-color: #f4f6f9; padding: 20px; color: #333; }
@@ -16,7 +19,7 @@
     .container { max-width: 1200px; margin: 0 auto; }
     
     /* NAVEGAÇÃO DE ABAS */
-    .nav-tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #ccc; padding-bottom: 5px; }
+    .nav-tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #ccc; padding-bottom: 5px; flex-wrap: wrap; }
     .tab-btn { background: #e0e0e0; color: #333; border: none; padding: 12px 20px; font-weight: bold; font-size: 14px; border-radius: 6px 6px 0 0; cursor: pointer; }
     .tab-btn.active { background: #2c3e50; color: white; }
     .tab-content { display: none; }
@@ -77,6 +80,7 @@
   <div class="nav-tabs">
     <button class="tab-btn active" onclick="switchTab('tabPainel', this)">📊 Gestão & Frota</button>
     <button class="tab-btn" onclick="switchTab('tabAgenda', this)">📅 Agenda de Tarefas & Lembretes</button>
+    <button class="tab-btn" onclick="switchTab('tabImportacao', this)">📁 Importar Planilha / Entregas</button>
   </div>
 
   <!-- ABA 1: OPERACIONAL E FROTA -->
@@ -559,6 +563,69 @@
     </div>
   </div>
 
+  <!-- ABA 3: IMPORTAÇÃO DE PLANILHA & RESUMO DE ENTREGAS -->
+  <div id="tabImportacao" class="tab-content">
+    <div class="card">
+      <h2>📁 Importar Planilha de Cargas e Entregas</h2>
+      <p style="font-size:13px; color:#666; margin-bottom:15px;">
+        Selecione o arquivo da sua planilha (<b>.xlsx, .xls ou .csv</b>). O sistema identificará automaticamente a data, quantidade de saídas e número de entregas realizadas.
+      </p>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Mês / Ano da Planilha</label>
+          <input type="month" id="impMesAno" required>
+        </div>
+        <div class="form-group">
+          <label>Arquivo da Planilha (.xlsx, .xls, .csv)</label>
+          <input type="file" id="impFile" accept=".xlsx, .xls, .csv">
+        </div>
+      </div>
+      <button type="button" onclick="processarPlanilha()">📤 Processar e Salvar Planilha</button>
+    </div>
+
+    <div class="card">
+      <h2>📊 Resumo Consolidado do Mês</h2>
+      <div class="form-group" style="max-width:250px; margin-bottom:15px;">
+        <label>Filtrar Visualização por Mês</label>
+        <input type="month" id="filtroMesRelatorio" onchange="renderizarRelatorioPlanilhas()">
+      </div>
+      <div class="summary-box">
+        <div class="kpi-card kpi-success">
+          <h4>Total de Saídas no Mês</h4>
+          <p id="kpiTotalSaidasMes">0 saídas</p>
+        </div>
+        <div class="kpi-card">
+          <h4>Total de Entregas Realizadas</h4>
+          <p id="kpiTotalEntregasMes">0 entregas</p>
+        </div>
+        <div class="kpi-card kpi-warning">
+          <h4>Média de Entregas por Saída</h4>
+          <p id="kpiMediaEntregas">0 / saída</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🚚 Detalhamento Diário das Cargas</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Data da Carga</th>
+            <th>Veículo / Placa</th>
+            <th>Motorista</th>
+            <th>Qtd. Saídas</th>
+            <th>Qtd. Entregas</th>
+            <th>Status / Obs.</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tbRelatorioPlanilhas">
+          <tr><td colspan="7" style="text-align:center; color:#777;">Selecione um mês ou importe uma planilha.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -576,7 +643,7 @@
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
 
-  let cacheVeiculos = {}, cacheFinanceiro = {}, cacheViagens = {}, cacheManutencoes = {}, cacheEstoque = {}, cachePneus = {}, cacheAgenda = {}, cacheDescartePneus = {};
+  let cacheVeiculos = {}, cacheFinanceiro = {}, cacheViagens = {}, cacheManutencoes = {}, cacheEstoque = {}, cachePneus = {}, cacheAgenda = {}, cacheDescartePneus = {}, cachePlanilhas = {};
 
   function parseValorBR(val) {
     if (!val) return 0;
@@ -622,6 +689,144 @@
     const texto = `Semana de ${formatar(seg)} até ${formatar(dom)}`;
 
     return { chave, texto };
+  }
+
+  // Define mês atual como padrão na importação
+  document.addEventListener('DOMContentLoaded', () => {
+    const hojeMes = new Date().toISOString().substring(0, 7);
+    document.getElementById('impMesAno').value = hojeMes;
+    document.getElementById('filtroMesRelatorio').value = hojeMes;
+  });
+
+  // --- MÓDULO IMPORTAÇÃO DE PLANILHA ---
+  function processarPlanilha() {
+    const mesAno = document.getElementById('impMesAno').value;
+    const fileInput = document.getElementById('impFile');
+
+    if (!mesAno) { alert('Selecione o Mês / Ano!'); return; }
+    if (!fileInput.files || fileInput.files.length === 0) { alert('Escolha um arquivo de planilha (.xlsx, .csv)!'); return; }
+
+    const file = fileInput.files[0];
+    const reader = new FileReader();
+
+    reader.onload = function(e) {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const firstSheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[firstSheetName];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+      if (!jsonData || jsonData.length < 2) {
+        alert('A planilha parece estar vazia ou sem cabeçalhos!');
+        return;
+      }
+
+      let totalSaidas = 0;
+      let totalEntregas = 0;
+      const registros = [];
+
+      // Procura colunas por palavras-chave flexíveis
+      const headers = jsonData[0].map(h => String(h || '').toLowerCase().trim());
+      const colData = headers.findIndex(h => h.includes('data'));
+      const colVeiculo = headers.findIndex(h => h.includes('veiculo') || h.includes('placa') || h.includes('carro'));
+      const colMotorista = headers.findIndex(h => h.includes('motorista') || h.includes('condutor'));
+      const colSaida = headers.findIndex(h => h.includes('saida') || h.includes('viagem') || h.includes('qtd'));
+      const colEntrega = headers.findIndex(h => h.includes('entrega') || h.includes('cliente') || h.includes('parada'));
+
+      for (let i = 1; i < jsonData.length; i++) {
+        const row = jsonData[i];
+        if (!row || row.length === 0) continue;
+
+        let dataStr = colData >= 0 && row[colData] ? String(row[colData]) : new Date().toISOString().split('T')[0];
+        let veiculo = colVeiculo >= 0 && row[colVeiculo] ? String(row[colVeiculo]) : 'Não Especificado';
+        let motorista = colMotorista >= 0 && row[colMotorista] ? String(row[colMotorista]) : 'Geral';
+        let qSaidas = colSaida >= 0 ? parseInt(row[colSaida]) || 1 : 1;
+        let qEntregas = colEntrega >= 0 ? parseInt(row[colEntrega]) || 1 : 1;
+
+        totalSaidas += qSaidas;
+        totalEntregas += qEntregas;
+
+        registros.push({
+          data: dataStr,
+          veiculo: veiculo,
+          motorista: motorista,
+          saidas: qSaidas,
+          entregas: qEntregas
+        });
+      }
+
+      const payload = {
+        mesAno: mesAno,
+        nomeArquivo: file.name,
+        dataImportacao: new Date().toISOString(),
+        totalSaidas: totalSaidas,
+        totalEntregas: totalEntregas,
+        registros: registros
+      };
+
+      db.ref(`importacao_planilhas/${mesAno}`).set(payload)
+        .then(() => {
+          alert(`Planilha importada com sucesso!\nTotal de Saídas: ${totalSaidas}\nTotal de Entregas: ${totalEntregas}`);
+          document.getElementById('filtroMesRelatorio').value = mesAno;
+          fileInput.value = '';
+        });
+    };
+
+    reader.readAsArrayBuffer(file);
+  }
+
+  db.ref('importacao_planilhas').on('value', snapshot => {
+    cachePlanilhas = snapshot.val() || {};
+    renderizarRelatorioPlanilhas();
+  });
+
+  function renderizarRelatorioPlanilhas() {
+    const mesFiltro = document.getElementById('filtroMesRelatorio').value;
+    const tbody = document.getElementById('tbRelatorioPlanilhas');
+    tbody.innerHTML = '';
+
+    if (!mesFiltro || !cachePlanilhas[mesFiltro]) {
+      document.getElementById('kpiTotalSaidasMes').textContent = '0 saídas';
+      document.getElementById('kpiTotalEntregasMes').textContent = '0 entregas';
+      document.getElementById('kpiMediaEntregas').textContent = '0 / saída';
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#777;">Nenhuma planilha importada para este mês.</td></tr>';
+      return;
+    }
+
+    const dadosMes = cachePlanilhas[mesFiltro];
+    const totalS = dadosMes.totalSaidas || 0;
+    const totalE = dadosMes.totalEntregas || 0;
+    const media = totalS > 0 ? (totalE / totalS).toFixed(1) : 0;
+
+    document.getElementById('kpiTotalSaidasMes').textContent = `${totalS} saída(s)`;
+    document.getElementById('kpiTotalEntregasMes').textContent = `${totalE} entrega(s)`;
+    document.getElementById('kpiMediaEntregas').textContent = `${media} entregas/saída`;
+
+    const lista = dadosMes.registros || [];
+    if (lista.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#777;">Nenhum detalhe encontrado.</td></tr>';
+      return;
+    }
+
+    lista.forEach((item, index) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><b>${item.data}</b></td>
+        <td><b>${item.veiculo}</b></td>
+        <td>${item.motorista}</td>
+        <td><span class="badge badge-info">${item.saidas} saída(s)</span></td>
+        <td><span class="badge badge-ok">${item.entregas} entrega(s)</span></td>
+        <td>Concluído</td>
+        <td><button class="btn-danger" onclick="removerItemPlanilha('${mesFiltro}')">Excluir Mês</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function removerItemPlanilha(mesAno) {
+    if (confirm(`Deseja realmente excluir todos os dados importados de ${mesAno}?`)) {
+      db.ref(`importacao_planilhas/${mesAno}`).remove();
+    }
   }
 
   // --- AGENDA DE TAREFAS ---
@@ -1139,7 +1344,7 @@
     });
   });
 
-  // --- 7. DESCARTE DE PNEUS ---
+  // --- DESCARTE DE PNEUS ---
   function addDescartePneu() {
     const key = document.getElementById('editDescartePneuKey').value;
     const pneu = document.getElementById('dpPneu').value.trim();
@@ -1148,7 +1353,7 @@
     const dataDescarte = document.getElementById('dpData').value;
     const destino = document.getElementById('dpDestino').value.trim();
 
-    if (!pneu || !dataDescarte) { alert('Preencha os campos obrigatórios do descarte!'); return; }
+    if (!pneu || !dataDescarte) { alert('Preencha os campos obrigatórios!'); return; }
     const payload = { pneu, qtd, motivo, dataDescarte, destino };
 
     if (key) { db.ref(`descarte_pneus/${key}`).update(payload); } 
@@ -1185,10 +1390,7 @@
     const data = snapshot.val();
     cacheDescartePneus = data || {};
 
-    if (!data) { 
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#777;">Nenhum descarte registrado.</td></tr>'; 
-      return; 
-    }
+    if (!data) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#777;">Nenhum descarte.</td></tr>'; return; }
 
     Object.keys(data).forEach(key => {
       const item = data[key];
