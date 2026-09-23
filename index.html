@@ -9,7 +9,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
-  <!-- SheetJS para leitura e processamento de planilhas Excel/CSV -->
+  <!-- SheetJS para leitura de planilhas -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   <style>
@@ -20,7 +20,6 @@
     
     .header-bar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 20px; gap: 15px; }
     
-    /* NAVEGAÇÃO DE ABAS */
     .nav-tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #ccc; padding-bottom: 5px; flex-wrap: wrap; }
     .tab-btn { background: #e0e0e0; color: #333; border: none; padding: 12px 20px; font-weight: bold; font-size: 14px; border-radius: 6px 6px 0 0; cursor: pointer; }
     .tab-btn.active { background: #2c3e50; color: white; }
@@ -31,7 +30,7 @@
     .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
     .form-group { display: flex; flex-direction: column; }
     .form-group label { font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #2c3e50; }
-    .form-group input, .form-group select, .form-group textarea { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+    .form-group input, .form-group select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
     
     button { background: #27ae60; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; margin-top: 15px; font-weight: bold; }
     button:hover { background: #219150; }
@@ -39,10 +38,7 @@
     .btn-danger:hover { background: #c0392b; }
     .btn-warning { background: #f39c12; margin-top: 0; padding: 5px 10px; font-size: 12px; margin-right: 5px; color: white; }
     .btn-warning:hover { background: #d68910; }
-    .btn-toggle { background: #2980b9; margin-top: 0; padding: 5px 10px; font-size: 12px; margin-right: 5px; color: white; }
-    .btn-toggle:hover { background: #1f618d; }
     .btn-cancel { background: #7f8c8d; margin-top: 15px; margin-left: 10px; }
-    .btn-cancel:hover { background: #95a5a6; }
     
     table { width: 100%; border-collapse: collapse; margin-top: 10px; background: #fff; }
     th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #ddd; font-size: 13px; }
@@ -51,614 +47,129 @@
     
     .badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; color: white; display: inline-block; }
     .badge-ok { background-color: #27ae60; }
+    .badge-info { background-color: #2980b9; }
     .badge-alert { background-color: #f39c12; }
     .badge-danger { background-color: #e74c3c; }
-    .badge-info { background-color: #2980b9; }
-    .badge-done { background-color: #7f8c8d; }
     
     .summary-box { display: flex; gap: 15px; margin-top: 15px; flex-wrap: wrap; }
     .kpi-card { flex: 1; min-width: 200px; background: #ecf0f1; padding: 15px; border-radius: 6px; border-left: 5px solid #2980b9; }
     .kpi-card h4 { font-size: 12px; text-transform: uppercase; color: #7f8c8d; }
     .kpi-card p { font-size: 20px; font-weight: bold; color: #2c3e50; margin-top: 5px; }
-    .kpi-warning { border-left-color: #e74c3c; }
-    .kpi-success { border-left-color: #27ae60; }
-    .sync-status { display: inline-block; padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-left: 10px; background: #27ae60; color: white; }
-    
-    .driver-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-top: 10px; }
-    .driver-card { background: #f8f9fa; border: 1px solid #e2e8f0; border-left: 4px solid #27ae60; padding: 10px 15px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
-    .driver-name { font-weight: bold; color: #2c3e50; font-size: 14px; }
-    .driver-count { background: #27ae60; color: white; padding: 3px 10px; border-radius: 12px; font-weight: bold; font-size: 12px; }
-    
-    .card-header-flex { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+    .sync-status { display: inline-block; padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; background: #27ae60; color: white; }
   </style>
 </head>
 <body>
 
 <div class="container">
   <div class="header-bar">
-    <h1>
-      Painel Integrado de Gestão
-      <span class="sync-status">🟢 Nuvem Sincronizada</span>
-    </h1>
+    <h1>Painel Integrado de Gestão <span class="sync-status">🟢 Sincronizado</span></h1>
   </div>
 
-  <!-- NAVEGAÇÃO ENTRE ABAS -->
   <div class="nav-tabs">
-    <button class="tab-btn active" onclick="switchTab('tabPainel', this)">📊 Gestão & Frota</button>
-    <button class="tab-btn" onclick="switchTab('tabAgenda', this)">📅 Agenda de Tarefas & Lembretes</button>
-    <button class="tab-btn" onclick="switchTab('tabImportacao', this)">📁 Importar Planilha / Entregas</button>
+    <button class="tab-btn active" onclick="switchTab('tabMotoristas', this)">👨‍✈️ Cadastro Motorista x Placa</button>
+    <button class="tab-btn" onclick="switchTab('tabImportacao', this)">📁 Importar Planilha / Apuração Por Placa</button>
   </div>
 
-  <!-- ABA 1: OPERACIONAL E FROTA -->
-  <div id="tabPainel" class="tab-content active">
-    <!-- INDICADORES DA FROTA -->
+  <!-- ABA 1: CADASTRO MOTORISTA X PLACA -->
+  <div id="tabMotoristas" class="tab-content active">
     <div class="card">
-      <h2>📊 Status Geral da Frota</h2>
-      <div class="summary-box">
-        <div class="kpi-card kpi-success">
-          <h4>Veículos Disponíveis</h4>
-          <p id="kpiDisponiveis">0 veículos</p>
-        </div>
-        <div class="kpi-card kpi-warning">
-          <h4>Veículos Indisponíveis (Parados)</h4>
-          <p id="kpiIndisponiveis">0 veículos</p>
-        </div>
-        <div class="kpi-card">
-          <h4>Total na Frota</h4>
-          <p id="kpiTotalFrota">0 veículos</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- 1. CADASTRO DE VEÍCULOS -->
-    <div class="card">
-      <h2 id="titleVeiculo">1. Cadastro e Controle de Frota (Disponibilidade & Dias Parado)</h2>
-      <form id="cadastroVeiculoForm">
-        <input type="hidden" id="editVeiculoKey">
+      <h2 id="titleMot">👨‍✈️ Cadastrar Motorista e Placa Fixa</h2>
+      <form id="formMot">
+        <input type="hidden" id="editMotKey">
         <div class="form-grid">
           <div class="form-group">
-            <label>Modelo / Descrição do Veículo</label>
-            <input type="text" id="vModelo" placeholder="Ex: VW Delivery 9.170" required>
+            <label>Nome do Motorista</label>
+            <input type="text" id="motNome" placeholder="Ex: João Silva" required>
           </div>
           <div class="form-group">
-            <label>Placa do Veículo</label>
-            <input type="text" id="vPlaca" placeholder="Ex: ABC-1234" required>
+            <label>Placa do Veículo Titular</label>
+            <input type="text" id="motPlaca" placeholder="Ex: ABC-1234" required>
           </div>
           <div class="form-group">
-            <label>Status Atual</label>
-            <select id="vStatus">
-              <option value="Disponível">Disponível</option>
-              <option value="Indisponível">Indisponível (Parado)</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Data de Início do Status</label>
-            <input type="date" id="vDataStatus">
-          </div>
-          <div class="form-group">
-            <label>Observação / Motivo (Opcional)</label>
-            <input type="text" id="vObs" placeholder="Ex: Em manutenção / Aguardando peça">
+            <label>Modelo / Descrição</label>
+            <input type="text" id="motModelo" placeholder="Ex: Iveco Daily / VW 9.170">
           </div>
         </div>
-        <button type="button" id="btnSalvarVeiculo" onclick="cadastrarVeiculo()">Cadastrar Veículo</button>
-        <button type="button" id="btnCancelVeiculo" class="btn-cancel" onclick="cancelarEdicaoVeiculo()" style="display:none;">Cancelar Edição</button>
+        <button type="button" id="btnSalvarMot" onclick="salvarMotorista()">Salvar Motorista</button>
+        <button type="button" id="btnCancelMot" class="btn-cancel" onclick="cancelarMot()" style="display:none;">Cancelar</button>
       </form>
     </div>
 
     <div class="card">
-      <h2>Lista de Veículos da Frota</h2>
+      <h2>Lista de Motoristas e Placas Vinculadas</h2>
       <table>
         <thead>
           <tr>
-            <th>Modelo</th>
+            <th>Motorista</th>
             <th>Placa</th>
-            <th>Status</th>
-            <th>Desde</th>
-            <th>Dias Parado</th>
-            <th>Dias Disponível</th>
-            <th>Observação</th>
+            <th>Modelo</th>
             <th>Ações</th>
           </tr>
         </thead>
-        <tbody id="tbVeiculosCadastrados">
-          <tr><td colspan="8" style="text-align:center; color:#777;">Carregando frota...</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- 2. GESTÃO FINANCEIRA -->
-    <div class="card">
-      <h2 id="titleFinanceiro">2. Cadastro de Pedido / Nota Fiscal</h2>
-      <form id="financeForm">
-        <input type="hidden" id="editFinanceiroKey">
-        <div class="form-grid">
-          <div class="form-group">
-            <label>Nº Pedido / Nota Fiscal</label>
-            <input type="text" id="numPedido" placeholder="Ex: NF-12345" required>
-          </div>
-          <div class="form-group">
-            <label>Data de Emissão</label>
-            <input type="date" id="dataEmissao" required>
-          </div>
-          <div class="form-group">
-            <label>Valor Total (R$)</label>
-            <input type="text" id="valorPagamento" placeholder="Ex: 1500,00 ou 1.500,00" required>
-          </div>
-          <div class="form-group">
-            <label>Forma de Pagamento</label>
-            <select id="formaPagamento" onchange="toggleFormaPagamento()">
-              <option value="Boleto">Boleto Bancário</option>
-              <option value="PIX">PIX</option>
-            </select>
-          </div>
-          <div class="form-group" id="groupDataPagamento">
-            <label id="lblDataPagamento">Data Vencimento Boleto</label>
-            <input type="date" id="dataVencimento" required>
-          </div>
-        </div>
-        <button type="button" id="btnSalvarFinanceiro" onclick="addFinanceiro()">Salvar na Nuvem</button>
-        <button type="button" id="btnCancelFinanceiro" class="btn-cancel" onclick="cancelarEdicaoFinanceiro()" style="display:none;">Cancelar Edição</button>
-      </form>
-    </div>
-
-    <div class="card">
-      <h2>Controle de Notas, Boletos e Pagamentos</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Nº Pedido / NF</th>
-            <th>Data Emissão</th>
-            <th>Valor (R$)</th>
-            <th>Forma Pagamento</th>
-            <th>Data Vencimento/Pix</th>
-            <th>Status do Pagamento</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody id="tbFinanceiro">
-          <tr><td colspan="7" style="text-align:center; color:#777;">Carregando dados...</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- 3. GESTÃO DE SAÍDAS -->
-    <div class="card">
-      <h2 id="titleViagem">3. Registro Rápido de Saídas / Viagens</h2>
-      <form id="frotaForm">
-        <input type="hidden" id="editViagemKey">
-        <div class="form-grid">
-          <div class="form-group">
-            <label>Selecione o Veículo / Placa</label>
-            <select id="veiculoSelect" required>
-              <option value="">Selecione um veículo cadastrado...</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Motorista Responsável</label>
-            <input type="text" id="motorista" placeholder="Ex: João Silva" required>
-          </div>
-          <div class="form-group">
-            <label>Data de Saída</label>
-            <input type="date" id="dataSaida" required>
-          </div>
-        </div>
-        <button type="button" id="btnSalvarViagem" onclick="addViagem()">Registrar Saída</button>
-        <button type="button" id="btnCancelViagem" class="btn-cancel" onclick="cancelarEdicaoViagem()" style="display:none;">Cancelar Edição</button>
-      </form>
-    </div>
-
-    <div class="card">
-      <h2>🚚 Totais de Saídas por Motorista (Até Hoje)</h2>
-      <div id="driverSummary" class="driver-list">
-        <p style="color:#777;">Nenhuma saída registrada até o momento.</p>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-header-flex">
-        <h2>📊 Relatório Consolidado de Saídas por Veículo</h2>
-        <button class="btn-danger" style="padding: 6px 12px; font-size:13px;" onclick="excluirTodasSaidas()">🗑️ Excluir TODAS as Saídas</button>
-      </div>
-      <table>
-        <thead>
-          <tr>
-            <th>Veículo / Placa</th>
-            <th>Total Geral de Saídas</th>
-            <th>Motoristas Responsáveis</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody id="tbViagens">
-          <tr><td colspan="4" style="text-align:center; color:#777;">Carregando relatório...</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- 4. MANUTENÇÃO -->
-    <div class="card">
-      <h2 id="titleManutencao">4. Registro de Manutenção Realizada</h2>
-      <form id="manutencaoForm">
-        <input type="hidden" id="editManutencaoKey">
-        <div class="form-grid">
-          <div class="form-group">
-            <label>Veículo / Placa</label>
-            <input type="text" id="mVeiculo" placeholder="Ex: VW Delivery (ABC-1234)" required>
-          </div>
-          <div class="form-group">
-            <label>Data da Realização</label>
-            <input type="date" id="mDataRealizada" required>
-          </div>
-          <div class="form-group">
-            <label>Tipo de Serviço</label>
-            <select id="mServico">
-              <option value="Troca de Óleo e Filtros">Troca de Óleo e Filtros</option>
-              <option value="Sistema de Freios">Sistema de Freios</option>
-              <option value="Pneus e Alinhamento">Pneus e Alinhamento</option>
-              <option value="Correias e Motores">Correias e Motores</option>
-              <option value="Suspensão e Amortecedores">Suspensão</option>
-              <option value="Elétrica e Bateria">Elétrica e Bateria</option>
-              <option value="Revisão Geral">Revisão Geral</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Peças Trocadas</label>
-            <input type="text" id="mPeças" placeholder="Ex: Filtro de óleo" required>
-          </div>
-          <div class="form-group">
-            <label>Custo Total (R$)</label>
-            <input type="text" id="mCusto" placeholder="Ex: 1960 ou 1.960,00" required>
-          </div>
-          <div class="form-group">
-            <label>KM Atual</label>
-            <input type="number" id="mKmAtual" required>
-          </div>
-          <div class="form-group">
-            <label>KM Próxima Revisão</label>
-            <input type="number" id="mKmProxima" required>
-          </div>
-          <div class="form-group">
-            <label>Data Próxima Revisão</label>
-            <input type="date" id="mDataProxima" required>
-          </div>
-        </div>
-        <button type="button" id="btnSalvarManutencao" onclick="addManutencao()">Registrar Manutenção</button>
-        <button type="button" id="btnCancelManutencao" class="btn-cancel" onclick="cancelarEdicaoManutencao()" style="display:none;">Cancelar Edição</button>
-      </form>
-    </div>
-
-    <div class="card">
-      <h2>Histórico de Manutenções</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Veículo</th>
-            <th>Serviço / Peças</th>
-            <th>Custo (R$)</th>
-            <th>Realizado Em</th>
-            <th>KM Na Troca</th>
-            <th>Próxima Revisão</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody id="tbManutencao">
-          <tr><td colspan="7" style="text-align:center; color:#777;">Carregando manutenções...</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- 5. ESTOQUE DE PEÇAS -->
-    <div class="card">
-      <h2 id="titleEstoque">5. Controle de Estoque de Peças</h2>
-      <form id="estoqueForm">
-        <input type="hidden" id="editEstoqueKey">
-        <div class="form-grid">
-          <div class="form-group">
-            <label>Nome da Peça</label>
-            <input type="text" id="pNome" placeholder="Ex: Pastilha de Freio" required>
-          </div>
-          <div class="form-group">
-            <label>Código / Aplicação</label>
-            <input type="text" id="pCodigo" placeholder="Ex: Iveco Daily">
-          </div>
-          <div class="form-group">
-            <label>Qtd Atual</label>
-            <input type="number" id="pQtd" required>
-          </div>
-          <div class="form-group">
-            <label>Qtd Mínima</label>
-            <input type="number" id="pQtdMin" required>
-          </div>
-          <div class="form-group">
-            <label>Localização</label>
-            <input type="text" id="pLocal" placeholder="Ex: Prateleira B2">
-          </div>
-        </div>
-        <button type="button" id="btnSalvarEstoque" onclick="addEstoque()">Salvar no Estoque</button>
-        <button type="button" id="btnCancelEstoque" class="btn-cancel" onclick="cancelarEdicaoEstoque()" style="display:none;">Cancelar Edição</button>
-      </form>
-    </div>
-
-    <div class="card">
-      <h2>Inventário de Peças</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Peça</th>
-            <th>Código</th>
-            <th>Qtd. Estoque</th>
-            <th>Local</th>
-            <th>Status</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody id="tbEstoque">
-          <tr><td colspan="6" style="text-align:center; color:#777;">Carregando estoque...</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- 6. RODÍZIO E FREIOS -->
-    <div class="card">
-      <h2 id="titlePneusFreios">6. Rodízio de Pneus & Pastilhas</h2>
-      <form id="pneusFreiosForm">
-        <input type="hidden" id="editPneusKey">
-        <div class="form-grid">
-          <div class="form-group">
-            <label>Veículo</label>
-            <input type="text" id="pfVeiculo" placeholder="Ex: Iveco Daily" required>
-          </div>
-          <div class="form-group">
-            <label>Tipo</label>
-            <select id="pfTipo">
-              <option value="Rodízio de Pneus">Rodízio de Pneus</option>
-              <option value="Pastilha de Freio">Pastilha de Freio</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Data</label>
-            <input type="date" id="pfData" required>
-          </div>
-          <div class="form-group">
-            <label>KM Trocado</label>
-            <input type="number" id="pfKmAtual" required>
-          </div>
-          <div class="form-group">
-            <label>KM Próximo Serviço</label>
-            <input type="number" id="pfKmProxima" required>
-          </div>
-        </div>
-        <button type="button" id="btnSalvarPneus" onclick="addPneusFreios()">Registrar Serviço</button>
-        <button type="button" id="btnCancelPneus" class="btn-cancel" onclick="cancelarEdicaoPneus()" style="display:none;">Cancelar Edição</button>
-      </form>
-    </div>
-
-    <div class="card">
-      <h2>Controle de Pneus e Freios</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Veículo</th>
-            <th>Tipo</th>
-            <th>Data</th>
-            <th>KM Trocado</th>
-            <th>KM Próximo</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody id="tbPneusFreios">
-          <tr><td colspan="6" style="text-align:center; color:#777;">Carregando registros...</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- 7. DESCARTE DE PNEUS -->
-    <div class="card">
-      <h2 id="titleDescartePneus">7. Registro de Descarte de Pneus</h2>
-      <form id="descartePneusForm">
-        <input type="hidden" id="editDescartePneuKey">
-        <div class="form-grid">
-          <div class="form-group">
-            <label>Veículo / Pneu / Modelo</label>
-            <input type="text" id="dpPneu" placeholder="Ex: Pneu 215/75 R17.5 (Iveco SHW9I57)" required>
-          </div>
-          <div class="form-group">
-            <label>Quantidade</label>
-            <input type="number" id="dpQtd" min="1" value="1" required>
-          </div>
-          <div class="form-group">
-            <label>Motivo do Descarte</label>
-            <select id="dpMotivo">
-              <option value="Desgastado (Careca)">Desgastado (Careca)</option>
-              <option value="Bolha / Avaria Lateral">Bolha / Avaria Lateral</option>
-              <option value="Furo Irreparável">Furo Irreparável</option>
-              <option value="Deformação / Defeito">Deformação / Defeito</option>
-              <option value="Outro">Outro</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Data do Descarte</label>
-            <input type="date" id="dpData" required>
-          </div>
-          <div class="form-group">
-            <label>Destino / Empresa de Reciclagem</label>
-            <input type="text" id="dpDestino" placeholder="Ex: Recicladora X / Ponto de Coleta">
-          </div>
-        </div>
-        <button type="button" id="btnSalvarDescartePneu" onclick="addDescartePneu()">Registrar Descarte</button>
-        <button type="button" id="btnCancelDescartePneu" class="btn-cancel" onclick="cancelarEdicaoDescartePneu()" style="display:none;">Cancelar Edição</button>
-      </form>
-    </div>
-
-    <div class="card">
-      <h2>Histórico de Descarte de Pneus</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Pneu / Veículo</th>
-            <th>Qtd</th>
-            <th>Motivo</th>
-            <th>Data Descarte</th>
-            <th>Destino / Reciclagem</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody id="tbDescartePneus">
-          <tr><td colspan="6" style="text-align:center; color:#777;">Carregando descartes...</td></tr>
+        <tbody id="tbMotoristas">
+          <tr><td colspan="4" style="text-align:center;">Carregando motoristas...</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 
-  <!-- ABA 2: AGENDA DE TAREFAS E LEMBRETES -->
-  <div id="tabAgenda" class="tab-content">
-    <div class="card">
-      <h2 id="titleAgenda">📋 Nova Tarefa / Lembrete</h2>
-      <form id="agendaForm">
-        <input type="hidden" id="editAgendaKey">
-        <div class="form-grid">
-          <div class="form-group">
-            <label>Descrição da Tarefa</label>
-            <input type="text" id="tDescricao" placeholder="Ex: Levar Iveco para Vistoria / Pagar boleto" required>
-          </div>
-          <div class="form-group">
-            <label>Categoria</label>
-            <select id="tCategoria">
-              <option value="Frota/Transporte">Frota / Transporte</option>
-              <option value="Manutenção">Manutenção</option>
-              <option value="Financeiro">Financeiro / Pagamentos</option>
-              <option value="Geral/Pessoal">Geral / Pessoal</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Data de Vencimento / Lembrete</label>
-            <input type="date" id="tData" required>
-          </div>
-          <div class="form-group">
-            <label>Responsável</label>
-            <input type="text" id="tResponsavel" placeholder="Ex: João / Kaique">
-          </div>
-          <div class="form-group">
-            <label>Status</label>
-            <select id="tStatus">
-              <option value="Pendente">Pendente</option>
-              <option value="Em Andamento">Em Andamento</option>
-              <option value="Concluída">Concluída</option>
-            </select>
-          </div>
-        </div>
-        <button type="button" id="btnSalvarAgenda" onclick="addAgenda()">Salvar Tarefa</button>
-        <button type="button" id="btnCancelAgenda" class="btn-cancel" onclick="cancelarEdicaoAgenda()" style="display:none;">Cancelar Edição</button>
-      </form>
-    </div>
-
-    <div class="card">
-      <h2>📅 Tarefas e Lembretes Agendados</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Descrição</th>
-            <th>Categoria</th>
-            <th>Data Vencimento</th>
-            <th>Responsável</th>
-            <th>Lembrete / Prazo</th>
-            <th>Status</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody id="tbAgenda">
-          <tr><td colspan="7" style="text-align:center; color:#777;">Carregando tarefas...</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- ABA 3: IMPORTAÇÃO DE PLANILHA & RESUMO MENSAL CONSOLIDADO -->
+  <!-- ABA 2: IMPORTAÇÃO E APURAÇÃO POR PLACA -->
   <div id="tabImportacao" class="tab-content">
     <div class="card">
-      <h2>📁 Importar Planilha de Cargas e Entregas</h2>
-      <p style="font-size:13px; color:#666; margin-bottom:15px;">
-        Selecione o arquivo da sua planilha mensal (<b>.xlsx, .xls ou .csv</b>). O sistema irá consolidar automaticamente os dias (1 a 30) e calcular a produtividade individual de cada motorista.
-      </p>
+      <h2>📁 Importar Planilha Mensal</h2>
       <div class="form-grid">
         <div class="form-group">
-          <label>Mês / Ano da Planilha</label>
+          <label>Mês / Ano</label>
           <input type="month" id="impMesAno" required>
         </div>
         <div class="form-group">
-          <label>Arquivo da Planilha (.xlsx, .xls, .csv)</label>
+          <label>Planilha (.xlsx, .xls, .csv)</label>
           <input type="file" id="impFile" accept=".xlsx, .xls, .csv">
         </div>
       </div>
-      <button type="button" onclick="processarPlanilha()">📤 Processar e Salvar Planilha Mensal</button>
+      <button type="button" onclick="processarPlanilha()">📤 Processar e Apurar por Placa</button>
     </div>
 
     <div class="card">
-      <h2>📊 Resumo Consolidado do Mês (30 Dias)</h2>
+      <h2>📊 Resumo Consolidado do Mês</h2>
       <div class="form-group" style="max-width:250px; margin-bottom:15px;">
-        <label>Selecione o Mês para Visualizar</label>
-        <input type="month" id="filtroMesRelatorio" onchange="renderizarRelatorioPlanilhas()">
+        <label>Mês de Consulta</label>
+        <input type="month" id="filtroMesRelatorio" onchange="renderizarRelatorio()">
       </div>
       <div class="summary-box">
-        <div class="kpi-card kpi-success">
+        <div class="kpi-card">
           <h4>Total de Saídas no Mês</h4>
-          <p id="kpiTotalSaidasMes">0 saídas</p>
+          <p id="kpiTotalSaidas">0 saídas</p>
         </div>
         <div class="kpi-card">
-          <h4>Total de Entregas Realizadas</h4>
-          <p id="kpiTotalEntregasMes">0 entregas</p>
-        </div>
-        <div class="kpi-card kpi-warning">
-          <h4>Média de Entregas por Saída</h4>
-          <p id="kpiMediaEntregas">0 / saída</p>
+          <h4>Total de Entregas</h4>
+          <p id="kpiTotalEntregas">0 entregas</p>
         </div>
       </div>
     </div>
 
-    <!-- DESEMPENHO INDIVIDUAL POR MOTORISTA NO MÊS -->
+    <!-- CONSOLIDAÇÃO POR PLACA -->
     <div class="card">
-      <h2>👨‍✈️ Desempenho do Mês por Motorista (Consolidado)</h2>
+      <h2>🚚 Quantidade de Saídas por Placa e Motorista (Mês)</h2>
       <table>
         <thead>
           <tr>
-            <th>Nome do Motorista</th>
-            <th>Total de Saídas / Viagens</th>
-            <th>Total de Entregas Realizadas</th>
-            <th>Média Entregas / Saída</th>
+            <th>Placa</th>
+            <th>Motorista Vinculado</th>
+            <th>Qtd. Total de Saídas</th>
+            <th>Qtd. Total de Entregas</th>
+            <th>Média Entregas/Saída</th>
           </tr>
         </thead>
-        <tbody id="tbResumoMotoristasMes">
-          <tr><td colspan="4" style="text-align:center; color:#777;">Selecione um mês com dados.</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- CONSOLIDADO DIÁRIO (30 DIAS DO MÊS) -->
-    <div class="card">
-      <div class="card-header-flex">
-        <h2>🗓️ Junção Diária das Cargas (Até 30 Dias)</h2>
-        <button class="btn-danger" style="padding: 5px 10px; font-size:12px;" onclick="excluirDadosMesAtual()">🗑️ Excluir Dados Deste Mês</button>
-      </div>
-      <table>
-        <thead>
-          <tr>
-            <th>Data</th>
-            <th>Total Saídas no Dia</th>
-            <th>Total Entregas no Dia</th>
-            <th>Veículos Utilizados</th>
-            <th>Motoristas em Campo</th>
-          </tr>
-        </thead>
-        <tbody id="tbRelatorioPlanilhas">
-          <tr><td colspan="5" style="text-align:center; color:#777;">Selecione um mês ou importe uma planilha.</td></tr>
+        <tbody id="tbResumoPlaca">
+          <tr><td colspan="5" style="text-align:center; color:#777;">Selecione um mês com dados.</td></tr>
         </tbody>
       </table>
     </div>
   </div>
-
 </div>
 
 <script>
-  // CONFIGURAÇÃO DO FIREBASE
   const firebaseConfig = {
     apiKey: "AIzaSyAzQX2ZUP-0wzs6yJkheQUHMyk_h0_uYAY",
     authDomain: "trasporteadmararaquara.firebaseapp.com",
@@ -672,21 +183,7 @@
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
 
-  let cacheVeiculos = {}, cacheFinanceiro = {}, cacheViagens = {}, cacheManutencoes = {}, cacheEstoque = {}, cachePneus = {}, cacheAgenda = {}, cacheDescartePneus = {}, cachePlanilhas = {};
-
-  function parseValorBR(val) {
-    if (!val) return 0;
-    if (typeof val === 'number') return val;
-    let s = val.toString().trim();
-    if (s.includes(',')) { s = s.replace(/\./g, '').replace(',', '.'); }
-    const n = parseFloat(s);
-    return isNaN(n) ? 0 : n;
-  }
-
-  function formatarMoeda(val) {
-    const num = parseValorBR(val);
-    return num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  }
+  let cacheMotoristas = {}, cachePlanilhas = {};
 
   function switchTab(tabId, btn) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -695,818 +192,178 @@
     btn.classList.add('active');
   }
 
-  function calcularDiasDiferenca(dataStr) {
-    if (!dataStr) return 0;
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
-    const dt = new Date(dataStr + 'T00:00:00');
-    const diffTime = hoje - dt;
-    return Math.floor(diffTime / (1000 * 60 * 60 * 24));
-  }
-
   document.addEventListener('DOMContentLoaded', () => {
     const hojeMes = new Date().toISOString().substring(0, 7);
     document.getElementById('impMesAno').value = hojeMes;
     document.getElementById('filtroMesRelatorio').value = hojeMes;
   });
 
-  // --- MÓDULO IMPORTAÇÃO & CONSOLIDAÇÃO DE PLANILHA (30 DIAS + MOTORISTAS) ---
+  // CADASTRO DE MOTORISTAS
+  function salvarMotorista() {
+    const key = document.getElementById('editMotKey').value;
+    const nome = document.getElementById('motNome').value.trim();
+    const placa = document.getElementById('motPlaca').value.trim().toUpperCase();
+    const modelo = document.getElementById('motModelo').value.trim();
+
+    if (!nome || !placa) { alert('Preencha Nome e Placa!'); return; }
+    const payload = { nome, placa, modelo };
+
+    if (key) { db.ref(`cadastro_motoristas/${key}`).update(payload); }
+    else { db.ref('cadastro_motoristas').push(payload); }
+
+    cancelarMot();
+  }
+
+  function editarMot(key) {
+    const m = cacheMotoristas[key];
+    if (!m) return;
+    document.getElementById('editMotKey').value = key;
+    document.getElementById('motNome').value = m.nome;
+    document.getElementById('motPlaca').value = m.placa;
+    document.getElementById('motModelo').value = m.modelo || '';
+    document.getElementById('titleMot').textContent = "👨‍✈️ Editar Motorista";
+    document.getElementById('btnSalvarMot').textContent = "Atualizar Motorista";
+    document.getElementById('btnCancelMot').style.display = "inline-block";
+  }
+
+  function cancelarMot() {
+    document.getElementById('editMotKey').value = '';
+    document.getElementById('formMot').reset();
+    document.getElementById('titleMot').textContent = "👨‍✈️ Cadastrar Motorista e Placa Fixa";
+    document.getElementById('btnSalvarMot').textContent = "Salvar Motorista";
+    document.getElementById('btnCancelMot').style.display = "none";
+  }
+
+  db.ref('cadastro_motoristas').on('value', snapshot => {
+    const tbody = document.getElementById('tbMotoristas');
+    tbody.innerHTML = '';
+    const data = snapshot.val();
+    cacheMotoristas = data || {};
+
+    if (!data) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Nenhum motorista cadastrado.</td></tr>'; return; }
+
+    Object.keys(data).forEach(key => {
+      const m = data[key];
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><b>${m.nome}</b></td>
+        <td><span class="badge badge-info">${m.placa}</span></td>
+        <td>${m.modelo || '-'}</td>
+        <td>
+          <button class="btn-warning" onclick="editarMot('${key}')">Editar</button>
+          <button class="btn-danger" onclick="removerMot('${key}')">Excluir</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  });
+
+  function removerMot(key) {
+    if (confirm('Deseja excluir este motorista?')) db.ref(`cadastro_motoristas/${key}`).remove();
+  }
+
+  // PROCESSAMENTO DE PLANILHA POR PLACA
   function processarPlanilha() {
     const mesAno = document.getElementById('impMesAno').value;
     const fileInput = document.getElementById('impFile');
 
-    if (!mesAno) { alert('Selecione o Mês / Ano!'); return; }
-    if (!fileInput.files || fileInput.files.length === 0) { alert('Escolha um arquivo de planilha (.xlsx, .csv)!'); return; }
+    if (!mesAno || !fileInput.files[0]) { alert('Selecione o mês e o arquivo!'); return; }
 
-    const file = fileInput.files[0];
     const reader = new FileReader();
-
     reader.onload = function(e) {
       const data = new Uint8Array(e.target.result);
       const workbook = XLSX.read(data, { type: 'array' });
-      const firstSheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[firstSheetName];
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
       const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-      if (!jsonData || jsonData.length < 2) {
-        alert('A planilha parece estar vazia ou sem cabeçalhos!');
-        return;
-      }
-
-      let totalSaidas = 0;
-      let totalEntregas = 0;
-      const registros = [];
+      if (!jsonData || jsonData.length < 2) return;
 
       const headers = jsonData[0].map(h => String(h || '').toLowerCase().trim());
-      const colData = headers.findIndex(h => h.includes('data') || h.includes('dia'));
-      const colVeiculo = headers.findIndex(h => h.includes('veiculo') || h.includes('placa') || h.includes('carro'));
-      const colMotorista = headers.findIndex(h => h.includes('motorista') || h.includes('condutor') || h.includes('nome'));
-      const colSaida = headers.findIndex(h => h.includes('saida') || h.includes('viagem') || h.includes('qtd'));
-      const colEntrega = headers.findIndex(h => h.includes('entrega') || h.includes('cliente') || h.includes('parada'));
+      const colPlaca = headers.findIndex(h => h.includes('placa') || h.includes('veiculo') || h.includes('carro'));
+      const colSaida = headers.findIndex(h => h.includes('saida') || h.includes('qtd') || h.includes('viagem'));
+      const colEntrega = headers.findIndex(h => h.includes('entrega') || h.includes('parada') || h.includes('cliente'));
+
+      const registros = [];
 
       for (let i = 1; i < jsonData.length; i++) {
         const row = jsonData[i];
         if (!row || row.length === 0) continue;
 
-        let dataRaw = colData >= 0 && row[colData] ? String(row[colData]).trim() : '';
-        let dataFormatted = dataRaw;
-        
-        // Formatação simples de data se vier numérica do Excel
-        if (!isNaN(dataRaw) && dataRaw !== '') {
-          const excelDate = new Date((dataRaw - (25567 + 2)) * 86400 * 1000);
-          dataFormatted = excelDate.toISOString().split('T')[0];
-        } else if (dataRaw.includes('/')) {
-          const parts = dataRaw.split('/');
-          if (parts.length === 3) dataFormatted = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
-        }
-
-        if (!dataFormatted) dataFormatted = `${mesAno}-01`;
-
-        let veiculo = colVeiculo >= 0 && row[colVeiculo] ? String(row[colVeiculo]).trim() : 'Não Especificado';
-        let motorista = colMotorista >= 0 && row[colMotorista] ? String(row[colMotorista]).trim() : 'Motorista Não Identificado';
+        let placaRaw = colPlaca >= 0 && row[colPlaca] ? String(row[colPlaca]).toUpperCase().trim() : 'N/A';
         let qSaidas = colSaida >= 0 ? (parseInt(row[colSaida]) || 1) : 1;
         let qEntregas = colEntrega >= 0 ? (parseInt(row[colEntrega]) || 1) : 1;
 
-        totalSaidas += qSaidas;
-        totalEntregas += qEntregas;
-
-        registros.push({
-          data: dataFormatted,
-          veiculo: veiculo,
-          motorista: motorista,
-          saidas: qSaidas,
-          entregas: qEntregas
-        });
+        registros.push({ placa: placaRaw, saidas: qSaidas, entregas: qEntregas });
       }
 
-      const payload = {
-        mesAno: mesAno,
-        nomeArquivo: file.name,
-        dataImportacao: new Date().toISOString(),
-        totalSaidas: totalSaidas,
-        totalEntregas: totalEntregas,
-        registros: registros
-      };
-
-      db.ref(`importacao_planilhas/${mesAno}`).set(payload)
+      db.ref(`importacao_planilhas/${mesAno}`).set({ mesAno, registros })
         .then(() => {
-          alert(`Planilha de ${mesAno} processada e junta com sucesso!\nTotal Saídas: ${totalSaidas}\nTotal Entregas: ${totalEntregas}`);
+          alert('Planilha apurada com sucesso!');
           document.getElementById('filtroMesRelatorio').value = mesAno;
           fileInput.value = '';
         });
     };
-
-    reader.readAsArrayBuffer(file);
+    reader.readAsArrayBuffer(fileInput.files[0]);
   }
 
   db.ref('importacao_planilhas').on('value', snapshot => {
     cachePlanilhas = snapshot.val() || {};
-    renderizarRelatorioPlanilhas();
+    renderizarRelatorio();
   });
 
-  function renderizarRelatorioPlanilhas() {
-    const mesFiltro = document.getElementById('filtroMesRelatorio').value;
-    const tbodyDia = document.getElementById('tbRelatorioPlanilhas');
-    const tbodyMotorista = document.getElementById('tbResumoMotoristasMes');
+  function renderizarRelatorio() {
+    const mes = document.getElementById('filtroMesRelatorio').value;
+    const tbody = document.getElementById('tbResumoPlaca');
+    tbody.innerHTML = '';
 
-    tbodyDia.innerHTML = '';
-    tbodyMotorista.innerHTML = '';
-
-    if (!mesFiltro || !cachePlanilhas[mesFiltro]) {
-      document.getElementById('kpiTotalSaidasMes').textContent = '0 saídas';
-      document.getElementById('kpiTotalEntregasMes').textContent = '0 entregas';
-      document.getElementById('kpiMediaEntregas').textContent = '0 / saída';
-      tbodyDia.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#777;">Nenhuma planilha importada para este mês.</td></tr>';
-      tbodyMotorista.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#777;">Sem dados de motoristas para este mês.</td></tr>';
+    if (!mes || !cachePlanilhas[mes]) {
+      document.getElementById('kpiTotalSaidas').textContent = '0 saídas';
+      document.getElementById('kpiTotalEntregas').textContent = '0 entregas';
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Sem dados para este mês.</td></tr>';
       return;
     }
 
-    const dadosMes = cachePlanilhas[mesFiltro];
-    const listaRegistros = dadosMes.registros || [];
+    const registros = cachePlanilhas[mes].registros || [];
+    const porPlaca = {};
 
-    let sumSaidas = 0;
-    let sumEntregas = 0;
+    let totalS = 0, totalE = 0;
 
-    const diasAgrupados = {};
-    const motoristasAgrupados = {};
+    registros.forEach(r => {
+      totalS += r.saidas;
+      totalE += r.entregas;
 
-    listaRegistros.forEach(item => {
-      sumSaidas += item.saidas;
-      sumEntregas += item.entregas;
-
-      // Agrupamento por Dia
-      const diaChave = item.data;
-      if (!diasAgrupados[diaChave]) {
-        diasAgrupados[diaChave] = {
-          saidas: 0,
-          entregas: 0,
-          veiculosSet: new Set(),
-          motoristasSet: new Set()
-        };
+      if (!porPlaca[r.placa]) {
+        porPlaca[r.placa] = { saidas: 0, entregas: 0 };
       }
-      diasAgrupados[diaChave].saidas += item.saidas;
-      diasAgrupados[diaChave].entregas += item.entregas;
-      if (item.veiculo) diasAgrupados[diaChave].veiculosSet.add(item.veiculo);
-      if (item.motorista) diasAgrupados[diaChave].motoristasSet.add(item.motorista);
-
-      // Agrupamento por Motorista
-      const motNome = item.motorista || 'Não Identificado';
-      if (!motoristasAgrupados[motNome]) {
-        motoristasAgrupados[motNome] = {
-          saidas: 0,
-          entregas: 0
-        };
-      }
-      motoristasAgrupados[motNome].saidas += item.saidas;
-      motoristasAgrupados[motNome].entregas += item.entregas;
+      porPlaca[r.placa].saidas += r.saidas;
+      porPlaca[r.placa].entregas += r.entregas;
     });
 
-    const mediaGeral = sumSaidas > 0 ? (sumEntregas / sumSaidas).toFixed(1) : 0;
-    document.getElementById('kpiTotalSaidasMes').textContent = `${sumSaidas} saída(s)`;
-    document.getElementById('kpiTotalEntregasMes').textContent = `${sumEntregas} entrega(s)`;
-    document.getElementById('kpiMediaEntregas').textContent = `${mediaGeral} entregas/saída`;
+    document.getElementById('kpiTotalSaidas').textContent = `${totalS} saídas`;
+    document.getElementById('kpiTotalEntregas').textContent = `${totalE} entregas`;
 
-    // 1. Tabela de Motoristas
-    const listaMotoristasKeys = Object.keys(motoristasAgrupados).sort();
-    if (listaMotoristasKeys.length === 0) {
-      tbodyMotorista.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#777;">Nenhum registro.</td></tr>';
-    } else {
-      listaMotoristasKeys.forEach(mot => {
-        const infoM = motoristasAgrupados[mot];
-        const medM = infoM.saidas > 0 ? (infoM.entregas / infoM.saidas).toFixed(1) : 0;
-        const trM = document.createElement('tr');
-        trM.innerHTML = `
-          <td><b>${mot}</b></td>
-          <td><span class="badge badge-info">${infoM.saidas} saída(s)</span></td>
-          <td><span class="badge badge-ok">${infoM.entregas} entrega(s)</span></td>
-          <td><b>${medM}</b> entregas/saída</td>
-        `;
-        tbodyMotorista.appendChild(trM);
-      });
-    }
+    // Mapeia Motorista Vinculado por Placa
+    const mapaPlacaMotorista = {};
+    Object.keys(cacheMotoristas).forEach(k => {
+      const m = cacheMotoristas[k];
+      if (m.placa) mapaPlacaMotorista[m.placa.toUpperCase()] = m.nome;
+    });
 
-    // 2. Tabela Diária Consolidada (30 dias)
-    const listaDiasKeys = Object.keys(diasAgrupados).sort();
-    if (listaDiasKeys.length === 0) {
-      tbodyDia.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#777;">Nenhum registro diário.</td></tr>';
-    } else {
-      listaDiasKeys.forEach(dKey => {
-        const infoD = diasAgrupados[dKey];
-        const listaVeic = Array.from(infoD.veiculosSet).join(', ');
-        const listaMot = Array.from(infoD.motoristasSet).join(', ');
-        
-        let dataExibicao = dKey;
-        if (dKey.includes('-')) {
-          dataExibicao = dKey.split('-').reverse().join('/');
-        }
-
-        const trD = document.createElement('tr');
-        trD.innerHTML = `
-          <td><b>${dataExibicao}</b></td>
-          <td><span class="badge badge-info">${infoD.saidas} saída(s)</span></td>
-          <td><span class="badge badge-ok">${infoD.entregas} entrega(s)</span></td>
-          <td>${listaVeic || '-'}</td>
-          <td>${listaMot || '-'}</td>
-        `;
-        tbodyDia.appendChild(trD);
-      });
-    }
-  }
-
-  function excluirDadosMesAtual() {
-    const mesFiltro = document.getElementById('filtroMesRelatorio').value;
-    if (!mesFiltro) return;
-    if (confirm(`Deseja realmente apagar todos os dados importados do mês ${mesFiltro}?`)) {
-      db.ref(`importacao_planilhas/${mesFiltro}`).remove()
-        .then(() => alert("Dados do mês excluídos com sucesso!"))
-        .catch(err => alert("Erro ao excluir dados: " + err.message));
-    }
-  }
-
-  // --- AGENDA DE TAREFAS ---
-  function addAgenda() {
-    const key = document.getElementById('editAgendaKey').value;
-    const descricao = document.getElementById('tDescricao').value.trim();
-    const categoria = document.getElementById('tCategoria').value;
-    const dataVenc = document.getElementById('tData').value;
-    const responsavel = document.getElementById('tResponsavel').value.trim();
-    const status = document.getElementById('tStatus').value;
-
-    if (!descricao || !dataVenc) { alert('Preencha a Descrição e a Data!'); return; }
-    const payload = { descricao, categoria, dataVenc, responsavel, status };
-    if (key) { db.ref(`agenda_tarefas/${key}`).update(payload); } else { db.ref('agenda_tarefas').push(payload); }
-    cancelarEdicaoAgenda();
-  }
-
-  function editarAgenda(key) {
-    const item = cacheAgenda[key];
-    if (!item) return;
-    document.getElementById('editAgendaKey').value = key;
-    document.getElementById('tDescricao').value = item.descricao || '';
-    document.getElementById('tCategoria').value = item.categoria || 'Frota/Transporte';
-    document.getElementById('tData').value = item.dataVenc || '';
-    document.getElementById('tResponsavel').value = item.responsavel || '';
-    document.getElementById('tStatus').value = item.status || 'Pendente';
-    document.getElementById('titleAgenda').textContent = "📋 Editar Tarefa";
-    document.getElementById('btnSalvarAgenda').textContent = "Atualizar Tarefa";
-    document.getElementById('btnCancelAgenda').style.display = "inline-block";
-  }
-
-  function cancelarEdicaoAgenda() {
-    document.getElementById('editAgendaKey').value = '';
-    document.getElementById('agendaForm').reset();
-    document.getElementById('titleAgenda').textContent = "📋 Nova Tarefa / Lembrete";
-    document.getElementById('btnSalvarAgenda').textContent = "Salvar Tarefa";
-    document.getElementById('btnCancelAgenda').style.display = "none";
-  }
-
-  function alternarStatusAgenda(key, statusAtual) {
-    db.ref(`agenda_tarefas/${key}`).update({ status: (statusAtual === 'Concluída') ? 'Pendente' : 'Concluída' });
-  }
-
-  db.ref('agenda_tarefas').on('value', snapshot => {
-    const tbody = document.getElementById('tbAgenda');
-    tbody.innerHTML = '';
-    const data = snapshot.val();
-    cacheAgenda = data || {};
-    if (!data) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#777;">Nenhuma tarefa agendada.</td></tr>'; return; }
-
-    Object.keys(data).forEach(key => {
-      const item = data[key];
-      const diffDias = calcularDiasDiferenca(item.dataVenc);
-      let lembreteBadge = item.status === 'Concluída' ? `<span class="badge badge-done">FINALIZADA</span>` :
-        (diffDias > 0 ? `<span class="badge badge-danger">ATRASADO (${diffDias}d)</span>` : (diffDias === 0 ? `<span class="badge badge-alert">VENCE HOJE!</span>` : `<span class="badge badge-ok">Faltam ${Math.abs(diffDias)} dia(s)</span>`));
-
-      const statusBadge = item.status === 'Concluída' ? `<span class="badge badge-done">CONCLUÍDA</span>` : (item.status === 'Em Andamento' ? `<span class="badge badge-info">EM ANDAMENTO</span>` : `<span class="badge badge-alert">PENDENTE</span>`);
+    Object.keys(porPlaca).sort().forEach(placa => {
+      const d = porPlaca[placa];
+      const motoristaNome = mapaPlacaMotorista[placa] || 'Motorista Não Cadastrado';
+      const media = d.saidas > 0 ? (d.entregas / d.saidas).toFixed(1) : 0;
 
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td><b>${item.descricao}</b></td>
-        <td><span class="badge badge-info">${item.categoria}</span></td>
-        <td>${item.dataVenc.split('-').reverse().join('/')}</td>
-        <td>${item.responsavel || '-'}</td>
-        <td>${lembreteBadge}</td>
-        <td>${statusBadge}</td>
-        <td>
-          <button class="btn-warning" onclick="editarAgenda('${key}')">Editar</button>
-          <button class="btn-toggle" onclick="alternarStatusAgenda('${key}', '${item.status}')">${item.status === 'Concluída' ? 'Reabrir' : 'Concluir'}</button>
-          <button class="btn-danger" onclick="removerItem('agenda_tarefas', '${key}')">Excluir</button>
-        </td>
+        <td><span class="badge badge-info">${placa}</span></td>
+        <td><b>${motoristaNome}</b></td>
+        <td><b>${d.saidas} saída(s)</b></td>
+        <td><span class="badge badge-ok">${d.entregas} entrega(s)</span></td>
+        <td>${media} entregas/saída</td>
       `;
       tbody.appendChild(tr);
     });
-  });
-
-  // --- CONTROLE DE VEÍCULOS ---
-  function cadastrarVeiculo() {
-    const key = document.getElementById('editVeiculoKey').value;
-    const modelo = document.getElementById('vModelo').value.trim();
-    const placa = document.getElementById('vPlaca').value.trim().toUpperCase();
-    const status = document.getElementById('vStatus').value;
-    let dataStatus = document.getElementById('vDataStatus').value || new Date().toISOString().split('T')[0];
-    const obs = document.getElementById('vObs').value.trim();
-
-    if (!modelo || !placa) { alert('Preencha Modelo e Placa!'); return; }
-    const payload = { modelo, placa, status, dataStatus, obs };
-    if (key) { db.ref(`veiculos_cadastrados/${key}`).update(payload); } else { db.ref('veiculos_cadastrados').push(payload); }
-    cancelarEdicaoVeiculo();
-  }
-
-  function editarVeiculo(key) {
-    const item = cacheVeiculos[key];
-    if (!item) return;
-    document.getElementById('editVeiculoKey').value = key;
-    document.getElementById('vModelo').value = item.modelo || '';
-    document.getElementById('vPlaca').value = item.placa || '';
-    document.getElementById('vStatus').value = item.status || 'Disponível';
-    document.getElementById('vDataStatus').value = item.dataStatus || new Date().toISOString().split('T')[0];
-    document.getElementById('vObs').value = item.obs || '';
-    document.getElementById('titleVeiculo').textContent = "1. Editar Veículo";
-    document.getElementById('btnSalvarVeiculo').textContent = "Atualizar Veículo";
-    document.getElementById('btnCancelVeiculo').style.display = "inline-block";
-  }
-
-  function cancelarEdicaoVeiculo() {
-    document.getElementById('editVeiculoKey').value = '';
-    document.getElementById('cadastroVeiculoForm').reset();
-    document.getElementById('titleVeiculo').textContent = "1. Cadastro e Controle de Frota";
-    document.getElementById('btnSalvarVeiculo').textContent = "Cadastrar Veículo";
-    document.getElementById('btnCancelVeiculo').style.display = "none";
-  }
-
-  function alternarStatusVeiculo(key, statusAtual) {
-    db.ref(`veiculos_cadastrados/${key}`).update({ status: statusAtual === 'Disponível' ? 'Indisponível' : 'Disponível', dataStatus: new Date().toISOString().split('T')[0] });
-  }
-
-  db.ref('veiculos_cadastrados').on('value', snapshot => {
-    const tbody = document.getElementById('tbVeiculosCadastrados');
-    const selectVeiculo = document.getElementById('veiculoSelect');
-    tbody.innerHTML = ''; selectVeiculo.innerHTML = '<option value="">Selecione um veículo cadastrado...</option>';
-    const data = snapshot.val();
-    cacheVeiculos = data || {};
-
-    if (!data) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#777;">Nenhum veículo.</td></tr>'; return; }
-
-    let disp = 0, indisp = 0, total = 0;
-    Object.keys(data).forEach(key => {
-      const item = data[key];
-      total++;
-      if (item.status === 'Disponível') disp++; else indisp++;
-
-      const diff = calcularDiasDiferenca(item.dataStatus);
-      const isDisponivel = item.status === 'Disponível';
-
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td><b>${item.modelo}</b></td>
-        <td><b>${item.placa}</b></td>
-        <td><span class="badge ${isDisponivel ? 'badge-ok' : 'badge-danger'}">${item.status.toUpperCase()}</span></td>
-        <td>${item.dataStatus ? item.dataStatus.split('-').reverse().join('/') : '-'}</td>
-        <td>${!isDisponivel ? `<span class="badge badge-danger">${diff} dia(s)</span>` : '-'}</td>
-        <td>${isDisponivel ? `<span class="badge badge-ok">${diff} dia(s)</span>` : '-'}</td>
-        <td>${item.obs || '-'}</td>
-        <td>
-          <button class="btn-warning" onclick="editarVeiculo('${key}')">Editar</button>
-          <button class="btn-toggle" onclick="alternarStatusVeiculo('${key}', '${item.status}')">Mudar p/ ${isDisponivel ? 'Indisponível' : 'Disponível'}</button>
-          <button class="btn-danger" onclick="removerItem('veiculos_cadastrados', '${key}')">Excluir</button>
-        </td>
-      `;
-      tbody.appendChild(tr);
-
-      const opt = document.createElement('option');
-      opt.value = `${item.modelo} (${item.placa})`;
-      opt.textContent = `${item.modelo} - ${item.placa}`;
-      selectVeiculo.appendChild(opt);
-    });
-
-    document.getElementById('kpiDisponiveis').textContent = `${disp} disponível(is)`;
-    document.getElementById('kpiIndisponiveis').textContent = `${indisp} parado(s)`;
-    document.getElementById('kpiTotalFrota').textContent = `${total} veículo(s)`;
-  });
-
-  // --- FINANCEIRO ---
-  function toggleFormaPagamento() {
-    document.getElementById('lblDataPagamento').textContent = (document.getElementById('formaPagamento').value === 'PIX') ? 'Data do Pagamento PIX' : 'Data Vencimento Boleto';
-  }
-
-  function addFinanceiro() {
-    const key = document.getElementById('editFinanceiroKey').value;
-    const numPedido = document.getElementById('numPedido').value;
-    const dataEmissao = document.getElementById('dataEmissao').value;
-    const valorPagamento = parseValorBR(document.getElementById('valorPagamento').value);
-    const formaPagamento = document.getElementById('formaPagamento').value;
-    const dataVencimento = document.getElementById('dataVencimento').value;
-
-    if (!numPedido || !dataEmissao || !dataVencimento) { alert('Preencha os campos!'); return; }
-    const payload = { numPedido, dataEmissao, valorPagamento, formaPagamento, dataVencimento };
-    if (key) { db.ref(`financeiro/${key}`).update(payload); } else { db.ref('financeiro').push(payload); }
-    cancelarEdicaoFinanceiro();
-  }
-
-  function editarFinanceiro(key) {
-    const item = cacheFinanceiro[key];
-    if (!item) return;
-    document.getElementById('editFinanceiroKey').value = key;
-    document.getElementById('numPedido').value = item.numPedido || '';
-    document.getElementById('dataEmissao').value = item.dataEmissao || '';
-    document.getElementById('valorPagamento').value = item.valorPagamento ? formatarMoeda(item.valorPagamento) : '';
-    document.getElementById('formaPagamento').value = item.formaPagamento || 'Boleto';
-    document.getElementById('dataVencimento').value = item.dataVencimento || '';
-    toggleFormaPagamento();
-    document.getElementById('titleFinanceiro').textContent = "2. Editar Pedido / Nota Fiscal";
-    document.getElementById('btnSalvarFinanceiro').textContent = "Atualizar Registro";
-    document.getElementById('btnCancelFinanceiro').style.display = "inline-block";
-  }
-
-  function cancelarEdicaoFinanceiro() {
-    document.getElementById('editFinanceiroKey').value = '';
-    document.getElementById('financeForm').reset();
-    toggleFormaPagamento();
-    document.getElementById('titleFinanceiro').textContent = "2. Cadastro de Pedido / Nota Fiscal";
-    document.getElementById('btnSalvarFinanceiro').textContent = "Salvar na Nuvem";
-    document.getElementById('btnCancelFinanceiro').style.display = "none";
-  }
-
-  db.ref('financeiro').on('value', snapshot => {
-    const tbody = document.getElementById('tbFinanceiro');
-    tbody.innerHTML = '';
-    const data = snapshot.val();
-    cacheFinanceiro = data || {};
-    if (!data) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#777;">Nenhum lançamento.</td></tr>'; return; }
-    Object.keys(data).forEach(key => {
-      const item = data[key];
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td><b>${item.numPedido}</b></td>
-        <td>${item.dataEmissao.split('-').reverse().join('/')}</td>
-        <td><b>R$ ${formatarMoeda(item.valorPagamento)}</b></td>
-        <td><span class="badge ${item.formaPagamento === 'PIX' ? 'badge-ok' : 'badge-info'}">${item.formaPagamento}</span></td>
-        <td>${item.dataVencimento ? item.dataVencimento.split('-').reverse().join('/') : 'N/A'}</td>
-        <td><span class="badge badge-ok">EM DIA</span></td>
-        <td>
-          <button class="btn-warning" onclick="editarFinanceiro('${key}')">Editar</button>
-          <button class="btn-danger" onclick="removerItem('financeiro', '${key}')">Excluir</button>
-        </td>
-      `;
-      tbody.appendChild(tr);
-    });
-  });
-
-  // --- VIAGENS / SAÍDAS (CONSOLIDADO ÚNICO POR VEÍCULO) ---
-  function addViagem() {
-    const key = document.getElementById('editViagemKey').value;
-    const veiculo = document.getElementById('veiculoSelect').value;
-    const motorista = document.getElementById('motorista').value.trim();
-    const dataSaida = document.getElementById('dataSaida').value;
-    if (!veiculo || !motorista || !dataSaida) { alert('Preencha os campos da viagem!'); return; }
-    const payload = { veiculo, motorista, dataSaida };
-    if (key) { db.ref(`viagens/${key}`).update(payload); } else { db.ref('viagens').push(payload); }
-    cancelarEdicaoViagem();
-  }
-
-  function cancelarEdicaoViagem() {
-    document.getElementById('editViagemKey').value = '';
-    document.getElementById('frotaForm').reset();
-    document.getElementById('titleViagem').textContent = "3. Registro Rápido de Saídas";
-    document.getElementById('btnSalvarViagem').textContent = "Registrar Saída";
-    document.getElementById('btnCancelViagem').style.display = "none";
-  }
-
-  db.ref('viagens').on('value', snapshot => {
-    const tbody = document.getElementById('tbViagens');
-    const driverSummary = document.getElementById('driverSummary');
-    tbody.innerHTML = ''; driverSummary.innerHTML = '';
-    const data = snapshot.val();
-    cacheViagens = data || {};
-
-    if (!data) { 
-      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#777;">Nenhuma saída registrada.</td></tr>'; 
-      return; 
-    }
-
-    const motoristaContagem = {};
-    const hojeStr = new Date().toISOString().split('T')[0];
-    const relatorioVeiculos = {};
-
-    Object.keys(data).forEach(key => {
-      const item = data[key];
-      item.key = key;
-
-      if (item.dataSaida <= hojeStr) {
-        motoristaContagem[item.motorista.trim()] = (motoristaContagem[item.motorista.trim()] || 0) + 1;
-      }
-
-      const veiculoNome = item.veiculo || 'Veículo Não Identificado';
-      if (!relatorioVeiculos[veiculoNome]) {
-        relatorioVeiculos[veiculoNome] = {
-          totalSaidas: 0,
-          motoristasSet: new Set(),
-          chaves: []
-        };
-      }
-
-      relatorioVeiculos[veiculoNome].totalSaidas += 1;
-      relatorioVeiculos[veiculoNome].motoristasSet.add(item.motorista);
-      relatorioVeiculos[veiculoNome].chaves.push(key);
-    });
-
-    Object.keys(motoristaContagem).forEach(nome => {
-      const card = document.createElement('div');
-      card.className = 'driver-card';
-      card.innerHTML = `<span class="driver-name">${nome}</span><span class="driver-count">${motoristaContagem[nome]} saída(s)</span>`;
-      driverSummary.appendChild(card);
-    });
-
-    const veiculosOrdenados = Object.keys(relatorioVeiculos).sort();
-
-    veiculosOrdenados.forEach(veiculo => {
-      const info = relatorioVeiculos[veiculo];
-      const listaMotoristas = Array.from(info.motoristasSet).join(', ');
-
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td><b>${veiculo}</b></td>
-        <td><span class="badge badge-info" style="font-size:13px; padding:6px 12px;">${info.totalSaidas} saída(s) registrada(s)</span></td>
-        <td>${listaMotoristas || '-'}</td>
-        <td>
-          <button class="btn-danger" onclick="limparSaidasVeiculo('${veiculo}')">Limpar Saídas</button>
-        </td>
-      `;
-      tbody.appendChild(tr);
-    });
-  });
-
-  function limparSaidasVeiculo(veiculoNome) {
-    if (confirm(`Tem certeza que deseja excluir todas as saídas registradas para o veículo ${veiculoNome}?`)) {
-      Object.keys(cacheViagens).forEach(key => {
-        if (cacheViagens[key].veiculo === veiculoNome) {
-          db.ref(`viagens/${key}`).remove();
-        }
-      });
-    }
-  }
-
-  function excluirTodasSaidas() {
-    if (confirm("⚠️ Deseja realmente excluir TODAS as saídas/viagens registradas de todos os veículos?")) {
-      db.ref('viagens').remove()
-        .then(() => alert("✅ Todas as saídas foram excluídas com sucesso!"))
-        .catch(err => alert("Erro ao excluir saídas: " + err.message));
-    }
-  }
-
-  // --- MANUTENÇÃO ---
-  function addManutencao() {
-    const key = document.getElementById('editManutencaoKey').value;
-    const veiculo = document.getElementById('mVeiculo').value.trim();
-    const dataRealizada = document.getElementById('mDataRealizada').value;
-    const servico = document.getElementById('mServico').value;
-    const peças = document.getElementById('mPeças').value;
-    const custo = parseValorBR(document.getElementById('mCusto').value);
-    const kmAtual = parseInt(document.getElementById('mKmAtual').value);
-    const kmProxima = parseInt(document.getElementById('mKmProxima').value);
-    const dataProxima = document.getElementById('mDataProxima').value;
-
-    const payload = { veiculo, dataRealizada, servico, peças, custo, kmAtual, kmProxima, dataProxima };
-    if (key) { db.ref(`manutencoes/${key}`).update(payload); } else { db.ref('manutencoes').push(payload); }
-    cancelarEdicaoManutencao();
-  }
-
-  function editarManutencao(key) {
-    const item = cacheManutencoes[key];
-    if (!item) return;
-    document.getElementById('editManutencaoKey').value = key;
-    document.getElementById('mVeiculo').value = item.veiculo || '';
-    document.getElementById('mDataRealizada').value = item.dataRealizada || '';
-    document.getElementById('mServico').value = item.servico || '';
-    document.getElementById('mPeças').value = item.peças || '';
-    document.getElementById('mCusto').value = item.custo ? formatarMoeda(item.custo) : '';
-    document.getElementById('mKmAtual').value = item.kmAtual || '';
-    document.getElementById('mKmProxima').value = item.kmProxima || '';
-    document.getElementById('mDataProxima').value = item.dataProxima || '';
-    document.getElementById('titleManutencao').textContent = "4. Editar Manutenção";
-    document.getElementById('btnSalvarManutencao').textContent = "Atualizar Manutenção";
-    document.getElementById('btnCancelManutencao').style.display = "inline-block";
-  }
-
-  function cancelarEdicaoManutencao() {
-    document.getElementById('editManutencaoKey').value = '';
-    document.getElementById('manutencaoForm').reset();
-    document.getElementById('titleManutencao').textContent = "4. Registro de Manutenção Realizada";
-    document.getElementById('btnSalvarManutencao').textContent = "Registrar Manutenção";
-    document.getElementById('btnCancelManutencao').style.display = "none";
-  }
-
-  db.ref('manutencoes').on('value', snapshot => {
-    const tbody = document.getElementById('tbManutencao');
-    tbody.innerHTML = '';
-    const data = snapshot.val();
-    cacheManutencoes = data || {};
-    if (!data) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#777;">Nenhuma manutenção.</td></tr>'; return; }
-    Object.keys(data).forEach(key => {
-      const item = data[key];
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td><b>${item.veiculo}</b></td>
-        <td><b>${item.servico}</b><br><small>${item.peças}</small></td>
-        <td>R$ ${formatarMoeda(item.custo)}</td>
-        <td>${item.dataRealizada.split('-').reverse().join('/')}</td>
-        <td>${item.kmAtual} KM</td>
-        <td><b>${item.kmProxima} KM</b><br><small>${item.dataProxima.split('-').reverse().join('/')}</small></td>
-        <td>
-          <button class="btn-warning" onclick="editarManutencao('${key}')">Editar</button>
-          <button class="btn-danger" onclick="removerItem('manutencoes', '${key}')">Excluir</button>
-        </td>
-      `;
-      tbody.appendChild(tr);
-    });
-  });
-
-  // --- ESTOQUE DE PEÇAS ---
-  function addEstoque() {
-    const key = document.getElementById('editEstoqueKey').value;
-    const nome = document.getElementById('pNome').value.trim();
-    const codigo = document.getElementById('pCodigo').value.trim();
-    const qtd = parseInt(document.getElementById('pQtd').value);
-    const qtdMin = parseInt(document.getElementById('pQtdMin').value);
-    const local = document.getElementById('pLocal').value.trim();
-    const payload = { nome, codigo, qtd, qtdMin, local };
-    if (key) { db.ref(`estoque_pecas/${key}`).update(payload); } else { db.ref('estoque_pecas').push(payload); }
-    cancelarEdicaoEstoque();
-  }
-
-  function editarEstoque(key) {
-    const item = cacheEstoque[key];
-    if (!item) return;
-    document.getElementById('editEstoqueKey').value = key;
-    document.getElementById('pNome').value = item.nome || '';
-    document.getElementById('pCodigo').value = item.codigo || '';
-    document.getElementById('pQtd').value = item.qtd || 0;
-    document.getElementById('pQtdMin').value = item.qtdMin || 0;
-    document.getElementById('pLocal').value = item.local || '';
-    document.getElementById('titleEstoque').textContent = "5. Editar Estoque";
-    document.getElementById('btnSalvarEstoque').textContent = "Atualizar Peça";
-    document.getElementById('btnCancelEstoque').style.display = "inline-block";
-  }
-
-  function cancelarEdicaoEstoque() {
-    document.getElementById('editEstoqueKey').value = '';
-    document.getElementById('estoqueForm').reset();
-    document.getElementById('titleEstoque').textContent = "5. Controle de Estoque de Peças";
-    document.getElementById('btnSalvarEstoque').textContent = "Salvar no Estoque";
-    document.getElementById('btnCancelEstoque').style.display = "none";
-  }
-
-  db.ref('estoque_pecas').on('value', snapshot => {
-    const tbody = document.getElementById('tbEstoque');
-    tbody.innerHTML = '';
-    const data = snapshot.val();
-    cacheEstoque = data || {};
-    if (!data) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#777;">Sem peças.</td></tr>'; return; }
-    Object.keys(data).forEach(key => {
-      const item = data[key];
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td><b>${item.nome}</b></td>
-        <td>${item.codigo || '-'}</td>
-        <td><b>${item.qtd} un.</b></td>
-        <td>${item.local || '-'}</td>
-        <td>${item.qtd <= item.qtdMin ? '<span class="badge badge-danger">BAIXO</span>' : '<span class="badge badge-ok">OK</span>'}</td>
-        <td>
-          <button class="btn-warning" onclick="editarEstoque('${key}')">Editar</button>
-          <button class="btn-danger" onclick="removerItem('estoque_pecas', '${key}')">Excluir</button>
-        </td>
-      `;
-      tbody.appendChild(tr);
-    });
-  });
-
-  // --- PNEUS E FREIOS ---
-  function addPneusFreios() {
-    const key = document.getElementById('editPneusKey').value;
-    const veiculo = document.getElementById('pfVeiculo').value.trim();
-    const tipo = document.getElementById('pfTipo').value;
-    const dataServico = document.getElementById('pfData').value;
-    const kmAtual = parseInt(document.getElementById('pfKmAtual').value);
-    const kmProxima = parseInt(document.getElementById('pfKmProxima').value);
-    const payload = { veiculo, tipo, dataServico, kmAtual, kmProxima };
-    if (key) { db.ref(`pneus_freios/${key}`).update(payload); } else { db.ref('pneus_freios').push(payload); }
-    cancelarEdicaoPneus();
-  }
-
-  function editarPneusFreios(key) {
-    const item = cachePneus[key];
-    if (!item) return;
-    document.getElementById('editPneusKey').value = key;
-    document.getElementById('pfVeiculo').value = item.veiculo || '';
-    document.getElementById('pfTipo').value = item.tipo || '';
-    document.getElementById('pfData').value = item.dataServico || '';
-    document.getElementById('pfKmAtual').value = item.kmAtual || '';
-    document.getElementById('pfKmProxima').value = item.kmProxima || '';
-    document.getElementById('titlePneusFreios').textContent = "6. Editar Registro";
-    document.getElementById('btnSalvarPneus').textContent = "Atualizar";
-    document.getElementById('btnCancelPneus').style.display = "inline-block";
-  }
-
-  function cancelarEdicaoPneus() {
-    document.getElementById('editPneusKey').value = '';
-    document.getElementById('pneusFreiosForm').reset();
-    document.getElementById('titlePneusFreios').textContent = "6. Rodízio de Pneus & Pastilhas";
-    document.getElementById('btnSalvarPneus').textContent = "Registrar Serviço";
-    document.getElementById('btnCancelPneus').style.display = "none";
-  }
-
-  db.ref('pneus_freios').on('value', snapshot => {
-    const tbody = document.getElementById('tbPneusFreios');
-    tbody.innerHTML = '';
-    const data = snapshot.val();
-    cachePneus = data || {};
-    if (!data) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#777;">Sem registros.</td></tr>'; return; }
-    Object.keys(data).forEach(key => {
-      const item = data[key];
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td><b>${item.veiculo}</b></td>
-        <td><span class="badge badge-info">${item.tipo}</span></td>
-        <td>${item.dataServico.split('-').reverse().join('/')}</td>
-        <td>${item.kmAtual} KM</td>
-        <td><b>${item.kmProxima} KM</b></td>
-        <td>
-          <button class="btn-warning" onclick="editarPneusFreios('${key}')">Editar</button>
-          <button class="btn-danger" onclick="removerItem('pneus_freios', '${key}')">Excluir</button>
-        </td>
-      `;
-      tbody.appendChild(tr);
-    });
-  });
-
-  // --- DESCARTE DE PNEUS ---
-  function addDescartePneu() {
-    const key = document.getElementById('editDescartePneuKey').value;
-    const pneu = document.getElementById('dpPneu').value.trim();
-    const qtd = parseInt(document.getElementById('dpQtd').value) || 1;
-    const motivo = document.getElementById('dpMotivo').value;
-    const dataDescarte = document.getElementById('dpData').value;
-    const destino = document.getElementById('dpDestino').value.trim();
-
-    if (!pneu || !dataDescarte) { alert('Preencha os campos obrigatórios!'); return; }
-    const payload = { pneu, qtd, motivo, dataDescarte, destino };
-
-    if (key) { db.ref(`descarte_pneus/${key}`).update(payload); } 
-    else { db.ref('descarte_pneus').push(payload); }
-    cancelarEdicaoDescartePneu();
-  }
-
-  function editarDescartePneu(key) {
-    const item = cacheDescartePneus[key];
-    if (!item) return;
-    document.getElementById('editDescartePneuKey').value = key;
-    document.getElementById('dpPneu').value = item.pneu || '';
-    document.getElementById('dpQtd').value = item.qtd || 1;
-    document.getElementById('dpMotivo').value = item.motivo || 'Desgastado (Careca)';
-    document.getElementById('dpData').value = item.dataDescarte || '';
-    document.getElementById('dpDestino').value = item.destino || '';
-
-    document.getElementById('titleDescartePneus').textContent = "7. Editar Descarte de Pneu";
-    document.getElementById('btnSalvarDescartePneu').textContent = "Atualizar Registro";
-    document.getElementById('btnCancelDescartePneu').style.display = "inline-block";
-  }
-
-  function cancelarEdicaoDescartePneu() {
-    document.getElementById('editDescartePneuKey').value = '';
-    document.getElementById('descartePneusForm').reset();
-    document.getElementById('titleDescartePneus').textContent = "7. Registro de Descarte de Pneus";
-    document.getElementById('btnSalvarDescartePneu').textContent = "Registrar Descarte";
-    document.getElementById('btnCancelDescartePneu').style.display = "none";
-  }
-
-  db.ref('descarte_pneus').on('value', snapshot => {
-    const tbody = document.getElementById('tbDescartePneus');
-    tbody.innerHTML = '';
-    const data = snapshot.val();
-    cacheDescartePneus = data || {};
-
-    if (!data) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#777;">Nenhum descarte.</td></tr>'; return; }
-
-    Object.keys(data).forEach(key => {
-      const item = data[key];
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td><b>${item.pneu}</b></td>
-        <td><b>${item.qtd} un.</b></td>
-        <td><span class="badge badge-danger">${item.motivo}</span></td>
-        <td>${item.dataDescarte ? item.dataDescarte.split('-').reverse().join('/') : '-'}</td>
-        <td>${item.destino || '-'}</td>
-        <td>
-          <button class="btn-warning" onclick="editarDescartePneu('${key}')">Editar</button>
-          <button class="btn-danger" onclick="removerItem('descarte_pneus', '${key}')">Excluir</button>
-        </td>
-      `;
-      tbody.appendChild(tr);
-    });
-  });
-
-  function removerItem(no, id) {
-    if (confirm('Deseja excluir este registro da nuvem?')) { db.ref(`${no}/${id}`).remove(); }
   }
 </script>
 
