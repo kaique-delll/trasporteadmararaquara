@@ -85,6 +85,7 @@
   <!-- NAVEGAÇÃO ENTRE ABAS -->
   <div class="nav-tabs">
     <button class="tab-btn active" onclick="switchTab('tabPainel', this)">📊 Gestão & Frota</button>
+    <button class="tab-btn" onclick="switchTab('tabMotoristas', this)">👨‍✈️ Cadastrar Motorista x Placa</button>
     <button class="tab-btn" onclick="switchTab('tabAgenda', this)">📅 Agenda de Tarefas & Lembretes</button>
     <button class="tab-btn" onclick="switchTab('tabImportacao', this)">📁 Importar Planilha / Entregas</button>
   </div>
@@ -509,6 +510,49 @@
     </div>
   </div>
 
+  <!-- ABA NOVINHA: CADASTRO MOTORISTA X PLACA -->
+  <div id="tabMotoristas" class="tab-content">
+    <div class="card">
+      <h2 id="titleMot">👨‍✈️ Cadastrar Motorista e Placa Titular</h2>
+      <form id="formMot">
+        <input type="hidden" id="editMotKey">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Nome do Motorista</label>
+            <input type="text" id="motNome" placeholder="Ex: João Silva" required>
+          </div>
+          <div class="form-group">
+            <label>Placa do Veículo Titular</label>
+            <input type="text" id="motPlaca" placeholder="Ex: ABC-1234" required>
+          </div>
+          <div class="form-group">
+            <label>Modelo / Veículo (Opcional)</label>
+            <input type="text" id="motModelo" placeholder="Ex: Iveco Daily / VW 9.170">
+          </div>
+        </div>
+        <button type="button" id="btnSalvarMot" onclick="salvarMotorista()">Salvar Motorista</button>
+        <button type="button" id="btnCancelMot" class="btn-cancel" onclick="cancelarMot()" style="display:none;">Cancelar</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Lista de Motoristas e Placas Vinculadas</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Motorista</th>
+            <th>Placa Vinculada</th>
+            <th>Modelo</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tbMotoristas">
+          <tr><td colspan="4" style="text-align:center; color:#777;">Carregando motoristas...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
   <!-- ABA 2: AGENDA DE TAREFAS E LEMBRETES -->
   <div id="tabAgenda" class="tab-content">
     <div class="card">
@@ -572,12 +616,12 @@
     </div>
   </div>
 
-  <!-- ABA 3: IMPORTAÇÃO DE PLANILHA & RESUMO MENSAL CONSOLIDADO -->
+  <!-- ABA 3: IMPORTAÇÃO DE PLANILHA & RESUMO MENSAL CONSOLIDADO POR PLACA -->
   <div id="tabImportacao" class="tab-content">
     <div class="card">
       <h2>📁 Importar Planilha de Cargas e Entregas</h2>
       <p style="font-size:13px; color:#666; margin-bottom:15px;">
-        Selecione o arquivo da sua planilha mensal (<b>.xlsx, .xls ou .csv</b>). O sistema irá consolidar automaticamente os dias (1 a 30) e calcular a produtividade individual de cada motorista.
+        Selecione o arquivo da sua planilha mensal (<b>.xlsx, .xls ou .csv</b>). O sistema irá consolidar automaticamente por <b>Placa</b>, calculando as saídas e entregas acumuladas no mês.
       </p>
       <div class="form-grid">
         <div class="form-group">
@@ -593,7 +637,7 @@
     </div>
 
     <div class="card">
-      <h2>📊 Resumo Consolidado do Mês (30 Dias)</h2>
+      <h2>📊 Resumo Consolidado do Mês</h2>
       <div class="form-group" style="max-width:250px; margin-bottom:15px;">
         <label>Selecione o Mês para Visualizar</label>
         <input type="month" id="filtroMesRelatorio" onchange="renderizarRelatorioPlanilhas()">
@@ -614,20 +658,21 @@
       </div>
     </div>
 
-    <!-- DESEMPENHO INDIVIDUAL POR MOTORISTA NO MÊS -->
+    <!-- CONSOLIDAÇÃO POR PLACA E MOTORISTA NO MÊS -->
     <div class="card">
-      <h2>👨‍✈️ Desempenho do Mês por Motorista (Consolidado)</h2>
+      <h2>🚚 Apuração Mensal por Placa e Motorista Vinculado</h2>
       <table>
         <thead>
           <tr>
-            <th>Nome do Motorista</th>
-            <th>Total de Saídas / Viagens</th>
-            <th>Total de Entregas Realizadas</th>
+            <th>Placa</th>
+            <th>Motorista Vinculado</th>
+            <th>Qtd. Saídas Acumuladas</th>
+            <th>Qtd. Entregas Realizadas</th>
             <th>Média Entregas / Saída</th>
           </tr>
         </thead>
-        <tbody id="tbResumoMotoristasMes">
-          <tr><td colspan="4" style="text-align:center; color:#777;">Selecione um mês com dados.</td></tr>
+        <tbody id="tbResumoPlacaMes">
+          <tr><td colspan="5" style="text-align:center; color:#777;">Selecione um mês com dados.</td></tr>
         </tbody>
       </table>
     </div>
@@ -644,7 +689,7 @@
             <th>Data</th>
             <th>Total Saídas no Dia</th>
             <th>Total Entregas no Dia</th>
-            <th>Veículos Utilizados</th>
+            <th>Placas em Campo</th>
             <th>Motoristas em Campo</th>
           </tr>
         </thead>
@@ -672,7 +717,7 @@
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
 
-  let cacheVeiculos = {}, cacheFinanceiro = {}, cacheViagens = {}, cacheManutencoes = {}, cacheEstoque = {}, cachePneus = {}, cacheAgenda = {}, cacheDescartePneus = {}, cachePlanilhas = {};
+  let cacheVeiculos = {}, cacheFinanceiro = {}, cacheViagens = {}, cacheManutencoes = {}, cacheEstoque = {}, cachePneus = {}, cacheAgenda = {}, cacheDescartePneus = {}, cachePlanilhas = {}, cacheMotoristas = {};
 
   function parseValorBR(val) {
     if (!val) return 0;
@@ -710,7 +755,72 @@
     document.getElementById('filtroMesRelatorio').value = hojeMes;
   });
 
-  // --- MÓDULO IMPORTAÇÃO & CONSOLIDAÇÃO DE PLANILHA (30 DIAS + MOTORISTAS) ---
+  // --- MÓDULO MOTORISTAS E PLACAS FIXAS ---
+  function salvarMotorista() {
+    const key = document.getElementById('editMotKey').value;
+    const nome = document.getElementById('motNome').value.trim();
+    const placa = document.getElementById('motPlaca').value.trim().toUpperCase();
+    const modelo = document.getElementById('motModelo').value.trim();
+
+    if (!nome || !placa) { alert('Preencha Nome e Placa!'); return; }
+    const payload = { nome, placa, modelo };
+
+    if (key) { db.ref(`cadastro_motoristas/${key}`).update(payload); }
+    else { db.ref('cadastro_motoristas').push(payload); }
+
+    cancelarMot();
+  }
+
+  function editarMot(key) {
+    const m = cacheMotoristas[key];
+    if (!m) return;
+    document.getElementById('editMotKey').value = key;
+    document.getElementById('motNome').value = m.nome;
+    document.getElementById('motPlaca').value = m.placa;
+    document.getElementById('motModelo').value = m.modelo || '';
+    document.getElementById('titleMot').textContent = "👨‍✈️ Editar Motorista";
+    document.getElementById('btnSalvarMot').textContent = "Atualizar Motorista";
+    document.getElementById('btnCancelMot').style.display = "inline-block";
+  }
+
+  function cancelarMot() {
+    document.getElementById('editMotKey').value = '';
+    document.getElementById('formMot').reset();
+    document.getElementById('titleMot').textContent = "👨‍✈️ Cadastrar Motorista e Placa Titular";
+    document.getElementById('btnSalvarMot').textContent = "Salvar Motorista";
+    document.getElementById('btnCancelMot').style.display = "none";
+  }
+
+  db.ref('cadastro_motoristas').on('value', snapshot => {
+    const tbody = document.getElementById('tbMotoristas');
+    tbody.innerHTML = '';
+    const data = snapshot.val();
+    cacheMotoristas = data || {};
+
+    if (!data) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#777;">Nenhum motorista cadastrado.</td></tr>'; return; }
+
+    Object.keys(data).forEach(key => {
+      const m = data[key];
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><b>${m.nome}</b></td>
+        <td><span class="badge badge-info">${m.placa}</span></td>
+        <td>${m.modelo || '-'}</td>
+        <td>
+          <button class="btn-warning" onclick="editarMot('${key}')">Editar</button>
+          <button class="btn-danger" onclick="removerMot('${key}')">Excluir</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+    renderizarRelatorioPlanilhas();
+  });
+
+  function removerMot(key) {
+    if (confirm('Deseja excluir este motorista?')) db.ref(`cadastro_motoristas/${key}`).remove();
+  }
+
+  // --- MÓDULO IMPORTAÇÃO & CONSOLIDAÇÃO POR PLACA (30 DIAS) ---
   function processarPlanilha() {
     const mesAno = document.getElementById('impMesAno').value;
     const fileInput = document.getElementById('impFile');
@@ -739,7 +849,7 @@
 
       const headers = jsonData[0].map(h => String(h || '').toLowerCase().trim());
       const colData = headers.findIndex(h => h.includes('data') || h.includes('dia'));
-      const colVeiculo = headers.findIndex(h => h.includes('veiculo') || h.includes('placa') || h.includes('carro'));
+      const colPlaca = headers.findIndex(h => h.includes('placa') || h.includes('veiculo') || h.includes('carro'));
       const colMotorista = headers.findIndex(h => h.includes('motorista') || h.includes('condutor') || h.includes('nome'));
       const colSaida = headers.findIndex(h => h.includes('saida') || h.includes('viagem') || h.includes('qtd'));
       const colEntrega = headers.findIndex(h => h.includes('entrega') || h.includes('cliente') || h.includes('parada'));
@@ -751,7 +861,6 @@
         let dataRaw = colData >= 0 && row[colData] ? String(row[colData]).trim() : '';
         let dataFormatted = dataRaw;
         
-        // Formatação simples de data se vier numérica do Excel
         if (!isNaN(dataRaw) && dataRaw !== '') {
           const excelDate = new Date((dataRaw - (25567 + 2)) * 86400 * 1000);
           dataFormatted = excelDate.toISOString().split('T')[0];
@@ -762,8 +871,8 @@
 
         if (!dataFormatted) dataFormatted = `${mesAno}-01`;
 
-        let veiculo = colVeiculo >= 0 && row[colVeiculo] ? String(row[colVeiculo]).trim() : 'Não Especificado';
-        let motorista = colMotorista >= 0 && row[colMotorista] ? String(row[colMotorista]).trim() : 'Motorista Não Identificado';
+        let placa = colPlaca >= 0 && row[colPlaca] ? String(row[colPlaca]).toUpperCase().trim() : 'N/A';
+        let motoristaPlanilha = colMotorista >= 0 && row[colMotorista] ? String(row[colMotorista]).trim() : '';
         let qSaidas = colSaida >= 0 ? (parseInt(row[colSaida]) || 1) : 1;
         let qEntregas = colEntrega >= 0 ? (parseInt(row[colEntrega]) || 1) : 1;
 
@@ -772,8 +881,8 @@
 
         registros.push({
           data: dataFormatted,
-          veiculo: veiculo,
-          motorista: motorista,
+          placa: placa,
+          motorista: motoristaPlanilha,
           saidas: qSaidas,
           entregas: qEntregas
         });
@@ -790,7 +899,7 @@
 
       db.ref(`importacao_planilhas/${mesAno}`).set(payload)
         .then(() => {
-          alert(`Planilha de ${mesAno} processada e junta com sucesso!\nTotal Saídas: ${totalSaidas}\nTotal Entregas: ${totalEntregas}`);
+          alert(`Planilha de ${mesAno} processada e junta com sucesso por Placas!\nTotal Saídas: ${totalSaidas}\nTotal Entregas: ${totalEntregas}`);
           document.getElementById('filtroMesRelatorio').value = mesAno;
           fileInput.value = '';
         });
@@ -807,17 +916,17 @@
   function renderizarRelatorioPlanilhas() {
     const mesFiltro = document.getElementById('filtroMesRelatorio').value;
     const tbodyDia = document.getElementById('tbRelatorioPlanilhas');
-    const tbodyMotorista = document.getElementById('tbResumoMotoristasMes');
+    const tbodyPlaca = document.getElementById('tbResumoPlacaMes');
 
     tbodyDia.innerHTML = '';
-    tbodyMotorista.innerHTML = '';
+    tbodyPlaca.innerHTML = '';
 
     if (!mesFiltro || !cachePlanilhas[mesFiltro]) {
       document.getElementById('kpiTotalSaidasMes').textContent = '0 saídas';
       document.getElementById('kpiTotalEntregasMes').textContent = '0 entregas';
       document.getElementById('kpiMediaEntregas').textContent = '0 / saída';
       tbodyDia.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#777;">Nenhuma planilha importada para este mês.</td></tr>';
-      tbodyMotorista.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#777;">Sem dados de motoristas para este mês.</td></tr>';
+      tbodyPlaca.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#777;">Sem dados de placas para este mês.</td></tr>';
       return;
     }
 
@@ -828,37 +937,47 @@
     let sumEntregas = 0;
 
     const diasAgrupados = {};
-    const motoristasAgrupados = {};
+    const placasAgrupadas = {};
+
+    // Mapeamento de Placa -> Motorista Cadastrado
+    const mapaPlacaMotorista = {};
+    Object.keys(cacheMotoristas).forEach(k => {
+      const m = cacheMotoristas[k];
+      if (m.placa) mapaPlacaMotorista[m.placa.toUpperCase()] = m.nome;
+    });
 
     listaRegistros.forEach(item => {
       sumSaidas += item.saidas;
       sumEntregas += item.entregas;
 
-      // Agrupamento por Dia
+      // Agrupamento por Dia (30 dias)
       const diaChave = item.data;
       if (!diasAgrupados[diaChave]) {
         diasAgrupados[diaChave] = {
           saidas: 0,
           entregas: 0,
-          veiculosSet: new Set(),
+          placasSet: new Set(),
           motoristasSet: new Set()
         };
       }
       diasAgrupados[diaChave].saidas += item.saidas;
       diasAgrupados[diaChave].entregas += item.entregas;
-      if (item.veiculo) diasAgrupados[diaChave].veiculosSet.add(item.veiculo);
-      if (item.motorista) diasAgrupados[diaChave].motoristasSet.add(item.motorista);
+      
+      const pUpper = item.placa.toUpperCase();
+      if (pUpper) diasAgrupados[diaChave].placasSet.add(pUpper);
+      
+      const nomeMot = mapaPlacaMotorista[pUpper] || item.motorista || 'Sem Cadastro';
+      diasAgrupados[diaChave].motoristasSet.add(nomeMot);
 
-      // Agrupamento por Motorista
-      const motNome = item.motorista || 'Não Identificado';
-      if (!motoristasAgrupados[motNome]) {
-        motoristasAgrupados[motNome] = {
+      // Agrupamento por Placa
+      if (!placasAgrupadas[pUpper]) {
+        placasAgrupadas[pUpper] = {
           saidas: 0,
           entregas: 0
         };
       }
-      motoristasAgrupados[motNome].saidas += item.saidas;
-      motoristasAgrupados[motNome].entregas += item.entregas;
+      placasAgrupadas[pUpper].saidas += item.saidas;
+      placasAgrupadas[pUpper].entregas += item.entregas;
     });
 
     const mediaGeral = sumSaidas > 0 ? (sumEntregas / sumSaidas).toFixed(1) : 0;
@@ -866,33 +985,36 @@
     document.getElementById('kpiTotalEntregasMes').textContent = `${sumEntregas} entrega(s)`;
     document.getElementById('kpiMediaEntregas').textContent = `${mediaGeral} entregas/saída`;
 
-    // 1. Tabela de Motoristas
-    const listaMotoristasKeys = Object.keys(motoristasAgrupados).sort();
-    if (listaMotoristasKeys.length === 0) {
-      tbodyMotorista.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#777;">Nenhum registro.</td></tr>';
+    // 1. Tabela por Placa
+    const listaPlacasKeys = Object.keys(placasAgrupadas).sort();
+    if (listaPlacasKeys.length === 0) {
+      tbodyPlaca.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#777;">Nenhum registro.</td></tr>';
     } else {
-      listaMotoristasKeys.forEach(mot => {
-        const infoM = motoristasAgrupados[mot];
-        const medM = infoM.saidas > 0 ? (infoM.entregas / infoM.saidas).toFixed(1) : 0;
-        const trM = document.createElement('tr');
-        trM.innerHTML = `
-          <td><b>${mot}</b></td>
-          <td><span class="badge badge-info">${infoM.saidas} saída(s)</span></td>
-          <td><span class="badge badge-ok">${infoM.entregas} entrega(s)</span></td>
-          <td><b>${medM}</b> entregas/saída</td>
+      listaPlacasKeys.forEach(pKey => {
+        const infoP = placasAgrupadas[pKey];
+        const medP = infoP.saidas > 0 ? (infoP.entregas / infoP.saidas).toFixed(1) : 0;
+        const motoristaNome = mapaPlacaMotorista[pKey] || 'Motorista Não Cadastrado';
+
+        const trP = document.createElement('tr');
+        trP.innerHTML = `
+          <td><span class="badge badge-info">${pKey}</span></td>
+          <td><b>${motoristaNome}</b></td>
+          <td><b>${infoP.saidas} saída(s)</b></td>
+          <td><span class="badge badge-ok">${infoP.entregas} entrega(s)</span></td>
+          <td><b>${medP}</b> entregas/saída</td>
         `;
-        tbodyMotorista.appendChild(trM);
+        tbodyPlaca.appendChild(trP);
       });
     }
 
-    // 2. Tabela Diária Consolidada (30 dias)
+    // 2. Tabela Diária Consolidada (até 30 dias)
     const listaDiasKeys = Object.keys(diasAgrupados).sort();
     if (listaDiasKeys.length === 0) {
       tbodyDia.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#777;">Nenhum registro diário.</td></tr>';
     } else {
       listaDiasKeys.forEach(dKey => {
         const infoD = diasAgrupados[dKey];
-        const listaVeic = Array.from(infoD.veiculosSet).join(', ');
+        const listaPlac = Array.from(infoD.placasSet).join(', ');
         const listaMot = Array.from(infoD.motoristasSet).join(', ');
         
         let dataExibicao = dKey;
@@ -905,7 +1027,7 @@
           <td><b>${dataExibicao}</b></td>
           <td><span class="badge badge-info">${infoD.saidas} saída(s)</span></td>
           <td><span class="badge badge-ok">${infoD.entregas} entrega(s)</span></td>
-          <td>${listaVeic || '-'}</td>
+          <td>${listaPlac || '-'}</td>
           <td>${listaMot || '-'}</td>
         `;
         tbodyDia.appendChild(trD);
@@ -1152,7 +1274,7 @@
     });
   });
 
-  // --- VIAGENS / SAÍDAS (CONSOLIDADO ÚNICO POR VEÍCULO) ---
+  // --- VIAGENS / SAÍDAS ---
   function addViagem() {
     const key = document.getElementById('editViagemKey').value;
     const veiculo = document.getElementById('veiculoSelect').value;
