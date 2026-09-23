@@ -3,20 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sistema Integrado & Agenda de Tarefas</title>
+  <title>Sistema Integrado de Gestão de Frota & Logística</title>
   
   <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
-  <!-- SheetJS para leitura de planilhas Excel/CSV -->
+  <!-- SheetJS para leitura e processamento de planilhas Excel/CSV -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   <style>
     * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
     body { background-color: #f4f6f9; padding: 20px; color: #333; }
     h1, h2, h3 { margin-bottom: 15px; color: #1a252f; }
-    .container { max-width: 1200px; margin: 0 auto; }
+    .container { max-width: 1250px; margin: 0 auto; }
     
     .header-bar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 20px; gap: 15px; }
     
@@ -32,19 +32,23 @@
     .form-group { display: flex; flex-direction: column; }
     .form-group label { font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #2c3e50; }
     .form-group input, .form-group select, .form-group textarea { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+    
     button { background: #27ae60; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; margin-top: 15px; font-weight: bold; }
     button:hover { background: #219150; }
-    .btn-danger { background: #e74c3c; margin-top: 0; padding: 4px 8px; font-size: 12px; }
+    .btn-danger { background: #e74c3c; margin-top: 0; padding: 5px 10px; font-size: 12px; }
     .btn-danger:hover { background: #c0392b; }
-    .btn-warning { background: #f39c12; margin-top: 0; padding: 4px 8px; font-size: 12px; margin-right: 5px; color: white; }
+    .btn-warning { background: #f39c12; margin-top: 0; padding: 5px 10px; font-size: 12px; margin-right: 5px; color: white; }
     .btn-warning:hover { background: #d68910; }
-    .btn-toggle { background: #2980b9; margin-top: 0; padding: 4px 8px; font-size: 12px; margin-right: 5px; color: white; }
+    .btn-toggle { background: #2980b9; margin-top: 0; padding: 5px 10px; font-size: 12px; margin-right: 5px; color: white; }
     .btn-toggle:hover { background: #1f618d; }
     .btn-cancel { background: #7f8c8d; margin-top: 15px; margin-left: 10px; }
     .btn-cancel:hover { background: #95a5a6; }
+    
     table { width: 100%; border-collapse: collapse; margin-top: 10px; background: #fff; }
     th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #ddd; font-size: 13px; }
     th { background-color: #2c3e50; color: white; }
+    tr:nth-child(even) { background-color: #f9f9f9; }
+    
     .badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; color: white; display: inline-block; }
     .badge-ok { background-color: #27ae60; }
     .badge-alert { background-color: #f39c12; }
@@ -568,12 +572,12 @@
     </div>
   </div>
 
-  <!-- ABA 3: IMPORTAÇÃO DE PLANILHA & RESUMO DE ENTREGAS -->
+  <!-- ABA 3: IMPORTAÇÃO DE PLANILHA & RESUMO MENSAL CONSOLIDADO -->
   <div id="tabImportacao" class="tab-content">
     <div class="card">
       <h2>📁 Importar Planilha de Cargas e Entregas</h2>
       <p style="font-size:13px; color:#666; margin-bottom:15px;">
-        Selecione o arquivo da sua planilha (<b>.xlsx, .xls ou .csv</b>). O sistema identificará automaticamente a data, quantidade de saídas e número de entregas realizadas.
+        Selecione o arquivo da sua planilha mensal (<b>.xlsx, .xls ou .csv</b>). O sistema irá consolidar automaticamente os dias (1 a 30) e calcular a produtividade individual de cada motorista.
       </p>
       <div class="form-grid">
         <div class="form-group">
@@ -585,13 +589,13 @@
           <input type="file" id="impFile" accept=".xlsx, .xls, .csv">
         </div>
       </div>
-      <button type="button" onclick="processarPlanilha()">📤 Processar e Salvar Planilha</button>
+      <button type="button" onclick="processarPlanilha()">📤 Processar e Salvar Planilha Mensal</button>
     </div>
 
     <div class="card">
-      <h2>📊 Resumo Consolidado do Mês</h2>
+      <h2>📊 Resumo Consolidado do Mês (30 Dias)</h2>
       <div class="form-group" style="max-width:250px; margin-bottom:15px;">
-        <label>Filtrar Visualização por Mês</label>
+        <label>Selecione o Mês para Visualizar</label>
         <input type="month" id="filtroMesRelatorio" onchange="renderizarRelatorioPlanilhas()">
       </div>
       <div class="summary-box">
@@ -610,22 +614,42 @@
       </div>
     </div>
 
+    <!-- DESEMPENHO INDIVIDUAL POR MOTORISTA NO MÊS -->
     <div class="card">
-      <h2>🚚 Detalhamento Diário das Cargas</h2>
+      <h2>👨‍✈️ Desempenho do Mês por Motorista (Consolidado)</h2>
       <table>
         <thead>
           <tr>
-            <th>Data da Carga</th>
-            <th>Veículo / Placa</th>
-            <th>Motorista</th>
-            <th>Qtd. Saídas</th>
-            <th>Qtd. Entregas</th>
-            <th>Status / Obs.</th>
-            <th>Ações</th>
+            <th>Nome do Motorista</th>
+            <th>Total de Saídas / Viagens</th>
+            <th>Total de Entregas Realizadas</th>
+            <th>Média Entregas / Saída</th>
+          </tr>
+        </thead>
+        <tbody id="tbResumoMotoristasMes">
+          <tr><td colspan="4" style="text-align:center; color:#777;">Selecione um mês com dados.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- CONSOLIDADO DIÁRIO (30 DIAS DO MÊS) -->
+    <div class="card">
+      <div class="card-header-flex">
+        <h2>🗓️ Junção Diária das Cargas (Até 30 Dias)</h2>
+        <button class="btn-danger" style="padding: 5px 10px; font-size:12px;" onclick="excluirDadosMesAtual()">🗑️ Excluir Dados Deste Mês</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Total Saídas no Dia</th>
+            <th>Total Entregas no Dia</th>
+            <th>Veículos Utilizados</th>
+            <th>Motoristas em Campo</th>
           </tr>
         </thead>
         <tbody id="tbRelatorioPlanilhas">
-          <tr><td colspan="7" style="text-align:center; color:#777;">Selecione um mês ou importe uma planilha.</td></tr>
+          <tr><td colspan="5" style="text-align:center; color:#777;">Selecione um mês ou importe uma planilha.</td></tr>
         </tbody>
       </table>
     </div>
@@ -686,7 +710,7 @@
     document.getElementById('filtroMesRelatorio').value = hojeMes;
   });
 
-  // --- MÓDULO IMPORTAÇÃO DE PLANILHA ---
+  // --- MÓDULO IMPORTAÇÃO & CONSOLIDAÇÃO DE PLANILHA (30 DIAS + MOTORISTAS) ---
   function processarPlanilha() {
     const mesAno = document.getElementById('impMesAno').value;
     const fileInput = document.getElementById('impFile');
@@ -714,9 +738,9 @@
       const registros = [];
 
       const headers = jsonData[0].map(h => String(h || '').toLowerCase().trim());
-      const colData = headers.findIndex(h => h.includes('data'));
+      const colData = headers.findIndex(h => h.includes('data') || h.includes('dia'));
       const colVeiculo = headers.findIndex(h => h.includes('veiculo') || h.includes('placa') || h.includes('carro'));
-      const colMotorista = headers.findIndex(h => h.includes('motorista') || h.includes('condutor'));
+      const colMotorista = headers.findIndex(h => h.includes('motorista') || h.includes('condutor') || h.includes('nome'));
       const colSaida = headers.findIndex(h => h.includes('saida') || h.includes('viagem') || h.includes('qtd'));
       const colEntrega = headers.findIndex(h => h.includes('entrega') || h.includes('cliente') || h.includes('parada'));
 
@@ -724,17 +748,30 @@
         const row = jsonData[i];
         if (!row || row.length === 0) continue;
 
-        let dataStr = colData >= 0 && row[colData] ? String(row[colData]) : new Date().toISOString().split('T')[0];
-        let veiculo = colVeiculo >= 0 && row[colVeiculo] ? String(row[colVeiculo]) : 'Não Especificado';
-        let motorista = colMotorista >= 0 && row[colMotorista] ? String(row[colMotorista]) : 'Geral';
-        let qSaidas = colSaida >= 0 ? parseInt(row[colSaida]) || 1 : 1;
-        let qEntregas = colEntrega >= 0 ? parseInt(row[colEntrega]) || 1 : 1;
+        let dataRaw = colData >= 0 && row[colData] ? String(row[colData]).trim() : '';
+        let dataFormatted = dataRaw;
+        
+        // Formatação simples de data se vier numérica do Excel
+        if (!isNaN(dataRaw) && dataRaw !== '') {
+          const excelDate = new Date((dataRaw - (25567 + 2)) * 86400 * 1000);
+          dataFormatted = excelDate.toISOString().split('T')[0];
+        } else if (dataRaw.includes('/')) {
+          const parts = dataRaw.split('/');
+          if (parts.length === 3) dataFormatted = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+        }
+
+        if (!dataFormatted) dataFormatted = `${mesAno}-01`;
+
+        let veiculo = colVeiculo >= 0 && row[colVeiculo] ? String(row[colVeiculo]).trim() : 'Não Especificado';
+        let motorista = colMotorista >= 0 && row[colMotorista] ? String(row[colMotorista]).trim() : 'Motorista Não Identificado';
+        let qSaidas = colSaida >= 0 ? (parseInt(row[colSaida]) || 1) : 1;
+        let qEntregas = colEntrega >= 0 ? (parseInt(row[colEntrega]) || 1) : 1;
 
         totalSaidas += qSaidas;
         totalEntregas += qEntregas;
 
         registros.push({
-          data: dataStr,
+          data: dataFormatted,
           veiculo: veiculo,
           motorista: motorista,
           saidas: qSaidas,
@@ -753,7 +790,7 @@
 
       db.ref(`importacao_planilhas/${mesAno}`).set(payload)
         .then(() => {
-          alert(`Planilha importada com sucesso!\nTotal de Saídas: ${totalSaidas}\nTotal de Entregas: ${totalEntregas}`);
+          alert(`Planilha de ${mesAno} processada e junta com sucesso!\nTotal Saídas: ${totalSaidas}\nTotal Entregas: ${totalEntregas}`);
           document.getElementById('filtroMesRelatorio').value = mesAno;
           fileInput.value = '';
         });
@@ -769,50 +806,120 @@
 
   function renderizarRelatorioPlanilhas() {
     const mesFiltro = document.getElementById('filtroMesRelatorio').value;
-    const tbody = document.getElementById('tbRelatorioPlanilhas');
-    tbody.innerHTML = '';
+    const tbodyDia = document.getElementById('tbRelatorioPlanilhas');
+    const tbodyMotorista = document.getElementById('tbResumoMotoristasMes');
+
+    tbodyDia.innerHTML = '';
+    tbodyMotorista.innerHTML = '';
 
     if (!mesFiltro || !cachePlanilhas[mesFiltro]) {
       document.getElementById('kpiTotalSaidasMes').textContent = '0 saídas';
       document.getElementById('kpiTotalEntregasMes').textContent = '0 entregas';
       document.getElementById('kpiMediaEntregas').textContent = '0 / saída';
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#777;">Nenhuma planilha importada para este mês.</td></tr>';
+      tbodyDia.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#777;">Nenhuma planilha importada para este mês.</td></tr>';
+      tbodyMotorista.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#777;">Sem dados de motoristas para este mês.</td></tr>';
       return;
     }
 
     const dadosMes = cachePlanilhas[mesFiltro];
-    const totalS = dadosMes.totalSaidas || 0;
-    const totalE = dadosMes.totalEntregas || 0;
-    const media = totalS > 0 ? (totalE / totalS).toFixed(1) : 0;
+    const listaRegistros = dadosMes.registros || [];
 
-    document.getElementById('kpiTotalSaidasMes').textContent = `${totalS} saída(s)`;
-    document.getElementById('kpiTotalEntregasMes').textContent = `${totalE} entrega(s)`;
-    document.getElementById('kpiMediaEntregas').textContent = `${media} entregas/saída`;
+    let sumSaidas = 0;
+    let sumEntregas = 0;
 
-    const lista = dadosMes.registros || [];
-    if (lista.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#777;">Nenhum detalhe encontrado.</td></tr>';
-      return;
+    const diasAgrupados = {};
+    const motoristasAgrupados = {};
+
+    listaRegistros.forEach(item => {
+      sumSaidas += item.saidas;
+      sumEntregas += item.entregas;
+
+      // Agrupamento por Dia
+      const diaChave = item.data;
+      if (!diasAgrupados[diaChave]) {
+        diasAgrupados[diaChave] = {
+          saidas: 0,
+          entregas: 0,
+          veiculosSet: new Set(),
+          motoristasSet: new Set()
+        };
+      }
+      diasAgrupados[diaChave].saidas += item.saidas;
+      diasAgrupados[diaChave].entregas += item.entregas;
+      if (item.veiculo) diasAgrupados[diaChave].veiculosSet.add(item.veiculo);
+      if (item.motorista) diasAgrupados[diaChave].motoristasSet.add(item.motorista);
+
+      // Agrupamento por Motorista
+      const motNome = item.motorista || 'Não Identificado';
+      if (!motoristasAgrupados[motNome]) {
+        motoristasAgrupados[motNome] = {
+          saidas: 0,
+          entregas: 0
+        };
+      }
+      motoristasAgrupados[motNome].saidas += item.saidas;
+      motoristasAgrupados[motNome].entregas += item.entregas;
+    });
+
+    const mediaGeral = sumSaidas > 0 ? (sumEntregas / sumSaidas).toFixed(1) : 0;
+    document.getElementById('kpiTotalSaidasMes').textContent = `${sumSaidas} saída(s)`;
+    document.getElementById('kpiTotalEntregasMes').textContent = `${sumEntregas} entrega(s)`;
+    document.getElementById('kpiMediaEntregas').textContent = `${mediaGeral} entregas/saída`;
+
+    // 1. Tabela de Motoristas
+    const listaMotoristasKeys = Object.keys(motoristasAgrupados).sort();
+    if (listaMotoristasKeys.length === 0) {
+      tbodyMotorista.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#777;">Nenhum registro.</td></tr>';
+    } else {
+      listaMotoristasKeys.forEach(mot => {
+        const infoM = motoristasAgrupados[mot];
+        const medM = infoM.saidas > 0 ? (infoM.entregas / infoM.saidas).toFixed(1) : 0;
+        const trM = document.createElement('tr');
+        trM.innerHTML = `
+          <td><b>${mot}</b></td>
+          <td><span class="badge badge-info">${infoM.saidas} saída(s)</span></td>
+          <td><span class="badge badge-ok">${infoM.entregas} entrega(s)</span></td>
+          <td><b>${medM}</b> entregas/saída</td>
+        `;
+        tbodyMotorista.appendChild(trM);
+      });
     }
 
-    lista.forEach((item) => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td><b>${item.data}</b></td>
-        <td><b>${item.veiculo}</b></td>
-        <td>${item.motorista}</td>
-        <td><span class="badge badge-info">${item.saidas} saída(s)</span></td>
-        <td><span class="badge badge-ok">${item.entregas} entrega(s)</span></td>
-        <td>Concluído</td>
-        <td><button class="btn-danger" onclick="removerItemPlanilha('${mesFiltro}')">Excluir Mês</button></td>
-      `;
-      tbody.appendChild(tr);
-    });
+    // 2. Tabela Diária Consolidada (30 dias)
+    const listaDiasKeys = Object.keys(diasAgrupados).sort();
+    if (listaDiasKeys.length === 0) {
+      tbodyDia.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#777;">Nenhum registro diário.</td></tr>';
+    } else {
+      listaDiasKeys.forEach(dKey => {
+        const infoD = diasAgrupados[dKey];
+        const listaVeic = Array.from(infoD.veiculosSet).join(', ');
+        const listaMot = Array.from(infoD.motoristasSet).join(', ');
+        
+        let dataExibicao = dKey;
+        if (dKey.includes('-')) {
+          dataExibicao = dKey.split('-').reverse().join('/');
+        }
+
+        const trD = document.createElement('tr');
+        trD.innerHTML = `
+          <td><b>${dataExibicao}</b></td>
+          <td><span class="badge badge-info">${infoD.saidas} saída(s)</span></td>
+          <td><span class="badge badge-ok">${infoD.entregas} entrega(s)</span></td>
+          <td>${listaVeic || '-'}</td>
+          <td>${listaMot || '-'}</td>
+        `;
+        tbodyDia.appendChild(trD);
+      });
+    }
   }
 
-  function removerItemPlanilha(mesAno) {
-    if (confirm(`Deseja realmente excluir todos os dados importados de ${mesAno}?`)) {
-      db.ref(`importacao_planilhas/${mesAno}`).remove();
+  function excluirDadosMesAtual() {
+    const mesFiltro = document.getElementById('filtroMesRelatorio').value;
+    if (!mesFiltro) return;
+    if (confirm(`Deseja realmente apagar todos os dados importados do mês ${mesFiltro}?`)) {
+      db.ref(`importacao_planilhas/${mesFiltro}`).remove()
+        .then(() => alert("Dados do mês excluídos com sucesso!"))
+        .catch(err => alert("Erro ao excluir dados: " + err.message));
     }
   }
 
