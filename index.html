@@ -64,12 +64,15 @@
     .kpi-success { border-left-color: #27ae60; }
     .sync-status { display: inline-block; padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-left: 10px; background: #27ae60; color: white; }
     
-    .driver-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-top: 10px; }
-    .driver-card { background: #f8f9fa; border: 1px solid #e2e8f0; border-left: 4px solid #27ae60; padding: 10px 15px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
+    .driver-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; margin-top: 10px; }
+    .driver-card { background: #f8f9fa; border: 1px solid #e2e8f0; border-left: 4px solid #27ae60; padding: 10px 15px; border-radius: 6px; display: flex; flex-direction: column; justify-content: center; }
+    .driver-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
     .driver-name { font-weight: bold; color: #2c3e50; font-size: 14px; }
     .driver-count { background: #27ae60; color: white; padding: 3px 10px; border-radius: 12px; font-weight: bold; font-size: 12px; }
+    .driver-last-update { font-size: 11px; color: #7f8c8d; text-align: right; margin-top: 4px; }
     
     .card-header-flex { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+    .last-update-banner { font-size: 13px; color: #2980b9; font-weight: bold; background: #ebf5fb; padding: 6px 12px; border-radius: 4px; border: 1px solid #aed6f1; }
   </style>
 </head>
 <body>
@@ -222,7 +225,7 @@
       </table>
     </div>
 
-    <!-- 3. GESTÃO DE SAÍDAS -->
+    <!-- 3. GESTÃO DE SAÍDAS COM ÚLTIMA DATA ATUALIZADA -->
     <div class="card">
       <h2 id="titleViagem">3. Registro Rápido de Saídas / Viagens</h2>
       <form id="frotaForm">
@@ -249,7 +252,12 @@
     </div>
 
     <div class="card">
-      <h2>🚚 Totais de Saídas por Motorista (Até Hoje)</h2>
+      <div class="card-header-flex">
+        <h2>🚚 Totais de Saídas por Motorista</h2>
+        <div class="last-update-banner" id="lastUpdateBannerMotoristas">
+          🕒 Última Atualização: <span>Nenhuma</span>
+        </div>
+      </div>
       <div id="driverSummary" class="driver-list">
         <p style="color:#777;">Nenhuma saída registrada até o momento.</p>
       </div>
@@ -271,6 +279,24 @@
         </thead>
         <tbody id="tbViagens">
           <tr><td colspan="4" style="text-align:center; color:#777;">Carregando relatório...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>📋 Histórico Detalhado de Saídas Registradas</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Data da Saída</th>
+            <th>Motorista</th>
+            <th>Veículo / Placa</th>
+            <th>Data/Hora de Modificação</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tbHistoricoSaidas">
+          <tr><td colspan="5" style="text-align:center; color:#777;">Carregando histórico...</td></tr>
         </tbody>
       </table>
     </div>
@@ -510,7 +536,7 @@
     </div>
   </div>
 
-  <!-- ABA NOVINHA: CADASTRO MOTORISTA X PLACA -->
+  <!-- ABA MOTORISTAS: CADASTRO MOTORISTA X PLACA -->
   <div id="tabMotoristas" class="tab-content">
     <div class="card">
       <h2 id="titleMot">👨‍✈️ Cadastrar Motorista e Placa Titular</h2>
@@ -616,7 +642,7 @@
     </div>
   </div>
 
-  <!-- ABA 3: IMPORTAÇÃO DE PLANILHA & RESUMO MENSAL CONSOLIDADO POR PLACA -->
+  <!-- ABA 3: IMPORTAÇÃO DE PLANILHA -->
   <div id="tabImportacao" class="tab-content">
     <div class="card">
       <h2>📁 Importar Planilha de Cargas e Entregas</h2>
@@ -733,6 +759,19 @@
     return num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
+  function formatarDataHoraBR(timestampStr) {
+    if (!timestampStr) return '-';
+    const d = new Date(timestampStr);
+    if (isNaN(d.getTime())) return timestampStr;
+    return d.toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
   function switchTab(tabId, btn) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
@@ -753,6 +792,7 @@
     const hojeMes = new Date().toISOString().substring(0, 7);
     document.getElementById('impMesAno').value = hojeMes;
     document.getElementById('filtroMesRelatorio').value = hojeMes;
+    document.getElementById('dataSaida').value = new Date().toISOString().split('T')[0];
   });
 
   // --- MÓDULO MOTORISTAS E PLACAS FIXAS ---
@@ -939,7 +979,6 @@
     const diasAgrupados = {};
     const placasAgrupadas = {};
 
-    // Mapeamento de Placa -> Motorista Cadastrado
     const mapaPlacaMotorista = {};
     Object.keys(cacheMotoristas).forEach(k => {
       const m = cacheMotoristas[k];
@@ -950,7 +989,6 @@
       sumSaidas += item.saidas;
       sumEntregas += item.entregas;
 
-      // Agrupamento por Dia (30 dias)
       const diaChave = item.data;
       if (!diasAgrupados[diaChave]) {
         diasAgrupados[diaChave] = {
@@ -969,7 +1007,6 @@
       const nomeMot = mapaPlacaMotorista[pUpper] || item.motorista || 'Sem Cadastro';
       diasAgrupados[diaChave].motoristasSet.add(nomeMot);
 
-      // Agrupamento por Placa
       if (!placasAgrupadas[pUpper]) {
         placasAgrupadas[pUpper] = {
           saidas: 0,
@@ -985,7 +1022,6 @@
     document.getElementById('kpiTotalEntregasMes').textContent = `${sumEntregas} entrega(s)`;
     document.getElementById('kpiMediaEntregas').textContent = `${mediaGeral} entregas/saída`;
 
-    // 1. Tabela por Placa
     const listaPlacasKeys = Object.keys(placasAgrupadas).sort();
     if (listaPlacasKeys.length === 0) {
       tbodyPlaca.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#777;">Nenhum registro.</td></tr>';
@@ -1007,7 +1043,6 @@
       });
     }
 
-    // 2. Tabela Diária Consolidada (até 30 dias)
     const listaDiasKeys = Object.keys(diasAgrupados).sort();
     if (listaDiasKeys.length === 0) {
       tbodyDia.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#777;">Nenhum registro diário.</td></tr>';
@@ -1274,48 +1309,82 @@
     });
   });
 
-  // --- VIAGENS / SAÍDAS ---
+  // --- VIAGENS / SAÍDAS COM REGISTRO DE ÚLTIMA ATUALIZAÇÃO ---
   function addViagem() {
     const key = document.getElementById('editViagemKey').value;
     const veiculo = document.getElementById('veiculoSelect').value;
     const motorista = document.getElementById('motorista').value.trim();
     const dataSaida = document.getElementById('dataSaida').value;
+    const dataAtualizacao = new Date().toISOString();
+
     if (!veiculo || !motorista || !dataSaida) { alert('Preencha os campos da viagem!'); return; }
-    const payload = { veiculo, motorista, dataSaida };
+    const payload = { veiculo, motorista, dataSaida, dataAtualizacao };
     if (key) { db.ref(`viagens/${key}`).update(payload); } else { db.ref('viagens').push(payload); }
     cancelarEdicaoViagem();
+  }
+
+  function editarViagem(key) {
+    const item = cacheViagens[key];
+    if (!item) return;
+    document.getElementById('editViagemKey').value = key;
+    document.getElementById('veiculoSelect').value = item.veiculo || '';
+    document.getElementById('motorista').value = item.motorista || '';
+    document.getElementById('dataSaida').value = item.dataSaida || '';
+    document.getElementById('titleViagem').textContent = "3. Editar Registro de Saída";
+    document.getElementById('btnSalvarViagem').textContent = "Atualizar Saída";
+    document.getElementById('btnCancelViagem').style.display = "inline-block";
   }
 
   function cancelarEdicaoViagem() {
     document.getElementById('editViagemKey').value = '';
     document.getElementById('frotaForm').reset();
-    document.getElementById('titleViagem').textContent = "3. Registro Rápido de Saídas";
+    document.getElementById('dataSaida').value = new Date().toISOString().split('T')[0];
+    document.getElementById('titleViagem').textContent = "3. Registro Rápido de Saídas / Viagens";
     document.getElementById('btnSalvarViagem').textContent = "Registrar Saída";
     document.getElementById('btnCancelViagem').style.display = "none";
   }
 
   db.ref('viagens').on('value', snapshot => {
     const tbody = document.getElementById('tbViagens');
+    const tbodyHistorico = document.getElementById('tbHistoricoSaidas');
     const driverSummary = document.getElementById('driverSummary');
-    tbody.innerHTML = ''; driverSummary.innerHTML = '';
+    const bannerLastUpdate = document.getElementById('lastUpdateBannerMotoristas');
+
+    tbody.innerHTML = ''; 
+    tbodyHistorico.innerHTML = '';
+    driverSummary.innerHTML = '';
     const data = snapshot.val();
     cacheViagens = data || {};
 
     if (!data) { 
       tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#777;">Nenhuma saída registrada.</td></tr>'; 
+      tbodyHistorico.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#777;">Nenhuma saída no histórico.</td></tr>'; 
+      driverSummary.innerHTML = '<p style="color:#777;">Nenhuma saída registrada até o momento.</p>';
+      bannerLastUpdate.innerHTML = '🕒 Última Atualização: <span>Nenhuma</span>';
       return; 
     }
 
-    const motoristaContagem = {};
-    const hojeStr = new Date().toISOString().split('T')[0];
+    const motoristaInfo = {};
     const relatorioVeiculos = {};
+    let maiorDataHoraIso = null;
 
     Object.keys(data).forEach(key => {
       const item = data[key];
       item.key = key;
 
-      if (item.dataSaida <= hojeStr) {
-        motoristaContagem[item.motorista.trim()] = (motoristaContagem[item.motorista.trim()] || 0) + 1;
+      const mNome = item.motorista.trim();
+      const dtAtual = item.dataAtualizacao || item.dataSaida;
+
+      if (!maiorDataHoraIso || (dtAtual && dtAtual > maiorDataHoraIso)) {
+        maiorDataHoraIso = dtAtual;
+      }
+
+      if (!motoristaInfo[mNome]) {
+        motoristaInfo[mNome] = { contagem: 0, ultimaAtualizacao: dtAtual };
+      }
+      motoristaInfo[mNome].contagem += 1;
+      if (dtAtual && dtAtual > motoristaInfo[mNome].ultimaAtualizacao) {
+        motoristaInfo[mNome].ultimaAtualizacao = dtAtual;
       }
 
       const veiculoNome = item.veiculo || 'Veículo Não Identificado';
@@ -1330,17 +1399,44 @@
       relatorioVeiculos[veiculoNome].totalSaidas += 1;
       relatorioVeiculos[veiculoNome].motoristasSet.add(item.motorista);
       relatorioVeiculos[veiculoNome].chaves.push(key);
+
+      // Tabela de Histórico
+      const trH = document.createElement('tr');
+      trH.innerHTML = `
+        <td><b>${item.dataSaida ? item.dataSaida.split('-').reverse().join('/') : '-'}</b></td>
+        <td><b>${item.motorista}</b></td>
+        <td><span class="badge badge-info">${item.veiculo}</span></td>
+        <td><small class="data-registro">${formatarDataHoraBR(item.dataAtualizacao || item.dataSaida)}</small></td>
+        <td>
+          <button class="btn-warning" onclick="editarViagem('${key}')">Editar</button>
+          <button class="btn-danger" onclick="removerItem('viagens', '${key}')">Excluir</button>
+        </td>
+      `;
+      tbodyHistorico.appendChild(trH);
     });
 
-    Object.keys(motoristaContagem).forEach(nome => {
+    // Atualiza o Banner da Última Atualização Geral das Saídas
+    if (maiorDataHoraIso) {
+      bannerLastUpdate.innerHTML = `🕒 Última Atualização: <span>${formatarDataHoraBR(maiorDataHoraIso)}</span>`;
+    }
+
+    // Renderiza os Cards dos Motoristas
+    Object.keys(motoristaInfo).forEach(nome => {
+      const info = motoristaInfo[nome];
       const card = document.createElement('div');
       card.className = 'driver-card';
-      card.innerHTML = `<span class="driver-name">${nome}</span><span class="driver-count">${motoristaContagem[nome]} saída(s)</span>`;
+      card.innerHTML = `
+        <div class="driver-card-header">
+          <span class="driver-name">${nome}</span>
+          <span class="driver-count">${info.contagem} saída(s)</span>
+        </div>
+        <div class="driver-last-update">🕒 ÚL: ${formatarDataHoraBR(info.ultimaAtualizacao)}</div>
+      `;
       driverSummary.appendChild(card);
     });
 
+    // Renderiza Relatório por Veículo
     const veiculosOrdenados = Object.keys(relatorioVeiculos).sort();
-
     veiculosOrdenados.forEach(veiculo => {
       const info = relatorioVeiculos[veiculo];
       const listaMotoristas = Array.from(info.motoristasSet).join(', ');
