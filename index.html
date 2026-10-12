@@ -78,9 +78,6 @@
     .driver-last-update { font-size: 11px; color: #7f8c8d; text-align: right; margin-top: 4px; }
     
     .card-header-flex { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
-    .last-update-banner { font-size: 13px; color: #2980b9; font-weight: bold; background: #ebf5fb; padding: 6px 12px; border-radius: 4px; border: 1px solid #aed6f1; }
-
-    /* ESTILOS DE TIPOLOGIA */
     .tipologia-group-title { background: #34495e; color: #fff; padding: 10px 15px; border-radius: 6px; margin-top: 20px; margin-bottom: 10px; font-size: 15px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
     .saida-red { color: #e74c3c; font-weight: bold; }
     .saida-green { color: #27ae60; font-weight: bold; }
@@ -279,7 +276,7 @@
     <!-- 3. SAÍDAS E VIAGENS COM DESTAQUE DE SAÍDAS < 15 EM VERMELHO -->
     <div class="card">
       <div class="card-header-flex">
-        <h2>🚚 Totais de Saídas por Motorista (< 15 Saídas em Vermelho)</h2>
+        <h2>🚚 Totais de Saídas por Motorista (&lt; 15 Saídas em Vermelho)</h2>
         <div class="form-group" style="max-width:200px; margin-bottom:0;">
           <label style="font-size:11px;">Mês Referência</label>
           <input type="month" id="filtroMesSaidas" onchange="renderizarResumoSaidasPlanilha()">
@@ -545,7 +542,7 @@
     </div>
   </div>
 
-  <!-- ABA MOTORISTAS: CADASTRO COM TIPOLOGIA E VÍNCULO "DA CASA" -->
+  <!-- ABA MOTORISTAS: CADASTRO COM TIPOLOGIA E VÍNCULO -->
   <div id="tabMotoristas" class="tab-content">
     <div class="card">
       <h2 id="titleMot">👨‍✈️ Cadastrar Motorista, Placa & Tipologia</h2>
@@ -805,7 +802,7 @@
     document.getElementById('filtroMesSaidas').value = hojeMes;
   });
 
-  // --- MÓDULO MOTORISTAS (COM TIPOLOGIA, VÍNCULO "DA CASA" E ORDEM ALFABÉTICA) ---
+  // --- MÓDULO MOTORISTAS (EDIÇÃO CORRIGIDA) ---
   function salvarMotorista() {
     const key = document.getElementById('editMotKey').value;
     const nome = document.getElementById('motNome').value.trim();
@@ -826,15 +823,23 @@
   function editarMot(key) {
     const m = cacheMotoristas[key];
     if (!m) return;
+    
+    // Garantir a mudança de aba para onde está o formulário
+    switchTab('tabMotoristas', document.querySelectorAll('.tab-btn')[1]);
+
     document.getElementById('editMotKey').value = key;
-    document.getElementById('motNome').value = m.nome;
-    document.getElementById('motPlaca').value = m.placa;
+    document.getElementById('motNome').value = m.nome || '';
+    document.getElementById('motPlaca').value = m.placa || '';
     document.getElementById('motTipologia').value = m.tipologia || 'Toco';
     document.getElementById('motVinculo').value = m.vinculo || 'Da Casa';
     document.getElementById('motModelo').value = m.modelo || '';
+
     document.getElementById('titleMot').textContent = "👨‍✈️ Editar Motorista";
     document.getElementById('btnSalvarMot').textContent = "Atualizar Motorista";
     document.getElementById('btnCancelMot').style.display = "inline-block";
+
+    // Rolar a tela de volta ao topo para o formulário
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   function cancelarMot() {
@@ -865,11 +870,9 @@
       grupos[tipo].push(m);
     });
 
-    // Ordena as tipologias
     const tipologiasOrdenadas = Object.keys(grupos).sort();
 
     tipologiasOrdenadas.forEach(tipo => {
-      // Ordena os motoristas de cada tipologia em ordem alfabética
       const motoristasDoGrupo = grupos[tipo].sort((a, b) => 
         (a.nome || '').localeCompare(b.nome || '', 'pt-BR', { sensitivity: 'base' })
       );
@@ -1092,7 +1095,6 @@
       const medP = infoP.saidas > 0 ? (infoP.entregas / infoP.saidas).toFixed(1) : 0;
       const cad = mapaPlacaMotorista[pKey] || { nome: 'Motorista Não Cadastrado', tipologia: '-', vinculo: '-' };
 
-      // Regra de destaque em vermelho para saídas < 15
       const classeSaida = infoP.saidas < 15 ? 'saida-red' : 'saida-green';
       const badgeSaida = infoP.saidas < 15 ? `<span class="badge badge-danger">⚠️ ${infoP.saidas} saída(s)</span>` : `<b>${infoP.saidas} saída(s)</b>`;
 
@@ -1159,18 +1161,15 @@
       const pUpper = item.placa.toUpperCase();
       const cad = mapaPlacaMotorista[pUpper] || { nome: item.motorista || 'Não Identificado', tipologia: '-', vinculo: '-' };
       
-      // Contagem por Motorista
       if (!motoristasContagem[cad.nome]) { motoristasContagem[cad.nome] = 0; }
       motoristasContagem[cad.nome] += item.saidas;
 
-      // Contagem por Veículo
       if (!veiculosContagem[pUpper]) {
         veiculosContagem[pUpper] = { totalSaidas: 0, motorista: cad.nome, tipologia: cad.tipologia, vinculo: cad.vinculo };
       }
       veiculosContagem[pUpper].totalSaidas += item.saidas;
     });
 
-    // Renderiza Cards dos Motoristas em Ordem Alfabética com Alerta em Vermelho < 15 Saídas
     const listaMots = Object.keys(motoristasContagem).sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' }));
     
     if (listaMots.length === 0) {
@@ -1193,7 +1192,6 @@
       });
     }
 
-    // Renderiza Tabela Consolidada de Veículos com Destaque
     const listaPlacas = Object.keys(veiculosContagem).sort();
     if (listaPlacas.length === 0) {
       tbodyVeiculos.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#777;">Nenhum registro.</td></tr>';
