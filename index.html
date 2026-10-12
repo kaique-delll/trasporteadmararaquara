@@ -56,6 +56,8 @@
     .badge-info { background-color: #2980b9; }
     .badge-done { background-color: #7f8c8d; }
     .badge-purple { background-color: #8e44ad; }
+    .badge-casa { background-color: #27ae60; }
+    .badge-terceiro { background-color: #e67e22; }
     
     .summary-box { display: flex; gap: 15px; margin-top: 15px; flex-wrap: wrap; }
     .kpi-card { flex: 1; min-width: 200px; background: #ecf0f1; padding: 15px; border-radius: 6px; border-left: 5px solid #2980b9; }
@@ -68,13 +70,20 @@
     
     .driver-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; margin-top: 10px; }
     .driver-card { background: #f8f9fa; border: 1px solid #e2e8f0; border-left: 4px solid #27ae60; padding: 10px 15px; border-radius: 6px; display: flex; flex-direction: column; justify-content: center; }
+    .driver-card.card-baixa-saida { border-left-color: #e74c3c; background-color: #fdf2f2; }
     .driver-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
     .driver-name { font-weight: bold; color: #2c3e50; font-size: 14px; }
     .driver-count { background: #27ae60; color: white; padding: 3px 10px; border-radius: 12px; font-weight: bold; font-size: 12px; }
+    .driver-count.count-red { background: #e74c3c; }
     .driver-last-update { font-size: 11px; color: #7f8c8d; text-align: right; margin-top: 4px; }
     
     .card-header-flex { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
     .last-update-banner { font-size: 13px; color: #2980b9; font-weight: bold; background: #ebf5fb; padding: 6px 12px; border-radius: 4px; border: 1px solid #aed6f1; }
+
+    /* ESTILOS DE TIPOLOGIA */
+    .tipologia-group-title { background: #34495e; color: #fff; padding: 10px 15px; border-radius: 6px; margin-top: 20px; margin-bottom: 10px; font-size: 15px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+    .saida-red { color: #e74c3c; font-weight: bold; }
+    .saida-green { color: #27ae60; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -172,7 +181,7 @@
       </table>
     </div>
 
-    <!-- 2. GESTÃO FINANCEIRA (TRANSPORTE X CDR & STATUS DE PAGAMENTO) -->
+    <!-- 2. GESTÃO FINANCEIRA -->
     <div class="card">
       <h2 id="titleFinanceiro">2. Lançamento Financeiro & Controle de Notas (Transporte / CDR)</h2>
       <form id="financeForm">
@@ -222,7 +231,7 @@
       </form>
     </div>
 
-    <!-- TOTAIS FINANCEIROS DO MÊS (TRANSPORTE X CDR) -->
+    <!-- TOTAIS FINANCEIROS DO MÊS -->
     <div class="card">
       <div class="card-header-flex">
         <h2>💰 Totais Financeiros Gastos no Mês</h2>
@@ -267,23 +276,23 @@
       </table>
     </div>
 
-    <!-- 3. SAÍDAS E VIAGENS ATUALIZADAS DIRETAMENTE PELA PLANILHA -->
+    <!-- 3. SAÍDAS E VIAGENS COM DESTAQUE DE SAÍDAS < 15 EM VERMELHO -->
     <div class="card">
       <div class="card-header-flex">
-        <h2>🚚 Totais de Saídas por Motorista (Atualizado pela Planilha)</h2>
+        <h2>🚚 Totais de Saídas por Motorista (< 15 Saídas em Vermelho)</h2>
         <div class="form-group" style="max-width:200px; margin-bottom:0;">
           <label style="font-size:11px;">Mês Referência</label>
           <input type="month" id="filtroMesSaidas" onchange="renderizarResumoSaidasPlanilha()">
         </div>
       </div>
       <div id="driverSummary" class="driver-list">
-        <p style="color:#777;">Importe uma planilha na aba "Importar Planilha / Entregas" para carregar os motoristas automaticamente.</p>
+        <p style="color:#777;">Importe uma planilha na aba "Importar Planilha / Entregas" para carregar as saídas automaticamente.</p>
       </div>
     </div>
 
     <div class="card">
       <div class="card-header-flex">
-        <h2>📊 Relatório Consolidado de Saídas por Veículo (Atualizado pela Planilha)</h2>
+        <h2>📊 Relatório Consolidado de Saídas por Veículo</h2>
       </div>
       <table>
         <thead>
@@ -291,10 +300,12 @@
             <th>Veículo / Placa</th>
             <th>Total de Saídas no Mês</th>
             <th>Motorista Vinculado</th>
+            <th>Tipologia</th>
+            <th>Vínculo</th>
           </tr>
         </thead>
         <tbody id="tbViagens">
-          <tr><td colspan="3" style="text-align:center; color:#777;">Aguardando importação de planilha...</td></tr>
+          <tr><td colspan="5" style="text-align:center; color:#777;">Aguardando importação de planilha...</td></tr>
         </tbody>
       </table>
     </div>
@@ -534,10 +545,10 @@
     </div>
   </div>
 
-  <!-- ABA MOTORISTAS: CADASTRO MOTORISTA X PLACA -->
+  <!-- ABA MOTORISTAS: CADASTRO COM TIPOLOGIA E VÍNCULO "DA CASA" -->
   <div id="tabMotoristas" class="tab-content">
     <div class="card">
-      <h2 id="titleMot">👨‍✈️ Cadastrar Motorista e Placa Titular</h2>
+      <h2 id="titleMot">👨‍✈️ Cadastrar Motorista, Placa & Tipologia</h2>
       <form id="formMot">
         <input type="hidden" id="editMotKey">
         <div class="form-grid">
@@ -550,7 +561,27 @@
             <input type="text" id="motPlaca" placeholder="Ex: ABC-1234" required>
           </div>
           <div class="form-group">
-            <label>Modelo / Veículo (Opcional)</label>
+            <label>Tipologia do Veículo</label>
+            <select id="motTipologia" required>
+              <option value="Toco">Toco</option>
+              <option value="Truck">Truck</option>
+              <option value="Carreta">Carreta</option>
+              <option value="VUC">VUC</option>
+              <option value="FIAT / Furgão">FIAT / Furgão</option>
+              <option value="Van">Van</option>
+              <option value="Outro">Outro</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Vínculo / Origem</label>
+            <select id="motVinculo" required>
+              <option value="Da Casa">🏠 Da Casa (Próprio)</option>
+              <option value="Agregado">🤝 Agregado</option>
+              <option value="Terceiro">🚚 Terceiro</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Modelo / Observação (Opcional)</label>
             <input type="text" id="motModelo" placeholder="Ex: Iveco Daily / VW 9.170">
           </div>
         </div>
@@ -559,21 +590,12 @@
       </form>
     </div>
 
+    <!-- LISTAGEM AGRUPADA POR TIPOLOGIA EM ORDEM ALFABÉTICA -->
     <div class="card">
-      <h2>Lista de Motoristas e Placas Vinculadas (Ordem Alfabética)</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Motorista</th>
-            <th>Placa Vinculada</th>
-            <th>Modelo</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody id="tbMotoristas">
-          <tr><td colspan="4" style="text-align:center; color:#777;">Carregando motoristas...</td></tr>
-        </tbody>
-      </table>
+      <h2>📋 Lista de Motoristas Agrupados por Tipologia (Ordem Alfabética)</h2>
+      <div id="containerMotoristasPorTipologia">
+        <p style="color:#777; text-align:center;">Carregando motoristas...</p>
+      </div>
     </div>
   </div>
 
@@ -684,24 +706,26 @@
 
     <!-- CONSOLIDAÇÃO POR PLACA E MOTORISTA NO MÊS -->
     <div class="card">
-      <h2>🚚 Apuração Mensal por Placa e Motorista Vinculado</h2>
+      <h2>🚚 Apuração Mensal por Placa, Motorista, Tipologia e Vínculo</h2>
       <table>
         <thead>
           <tr>
             <th>Placa</th>
             <th>Motorista Vinculado</th>
+            <th>Tipologia</th>
+            <th>Vínculo</th>
             <th>Qtd. Saídas Acumuladas</th>
             <th>Qtd. Entregas Realizadas</th>
             <th>Média Entregas / Saída</th>
           </tr>
         </thead>
         <tbody id="tbResumoPlacaMes">
-          <tr><td colspan="5" style="text-align:center; color:#777;">Selecione um mês com dados.</td></tr>
+          <tr><td colspan="7" style="text-align:center; color:#777;">Selecione um mês com dados.</td></tr>
         </tbody>
       </table>
     </div>
 
-    <!-- CONSOLIDADO DIÁRIO (30 DIAS DO MÊS) -->
+    <!-- CONSOLIDADO DIÁRIO -->
     <div class="card">
       <div class="card-header-flex">
         <h2>🗓️ Junção Diária das Cargas (Até 30 Dias)</h2>
@@ -781,15 +805,17 @@
     document.getElementById('filtroMesSaidas').value = hojeMes;
   });
 
-  // --- MÓDULO MOTORISTAS E PLACAS FIXAS (ORDEM ALFABÉTICA) ---
+  // --- MÓDULO MOTORISTAS (COM TIPOLOGIA, VÍNCULO "DA CASA" E ORDEM ALFABÉTICA) ---
   function salvarMotorista() {
     const key = document.getElementById('editMotKey').value;
     const nome = document.getElementById('motNome').value.trim();
     const placa = document.getElementById('motPlaca').value.trim().toUpperCase();
+    const tipologia = document.getElementById('motTipologia').value;
+    const vinculo = document.getElementById('motVinculo').value;
     const modelo = document.getElementById('motModelo').value.trim();
 
     if (!nome || !placa) { alert('Preencha Nome e Placa!'); return; }
-    const payload = { nome, placa, modelo };
+    const payload = { nome, placa, tipologia, vinculo, modelo };
 
     if (key) { db.ref(`cadastro_motoristas/${key}`).update(payload); }
     else { db.ref('cadastro_motoristas').push(payload); }
@@ -803,6 +829,8 @@
     document.getElementById('editMotKey').value = key;
     document.getElementById('motNome').value = m.nome;
     document.getElementById('motPlaca').value = m.placa;
+    document.getElementById('motTipologia').value = m.tipologia || 'Toco';
+    document.getElementById('motVinculo').value = m.vinculo || 'Da Casa';
     document.getElementById('motModelo').value = m.modelo || '';
     document.getElementById('titleMot').textContent = "👨‍✈️ Editar Motorista";
     document.getElementById('btnSalvarMot').textContent = "Atualizar Motorista";
@@ -812,45 +840,96 @@
   function cancelarMot() {
     document.getElementById('editMotKey').value = '';
     document.getElementById('formMot').reset();
-    document.getElementById('titleMot').textContent = "👨‍✈️ Cadastrar Motorista e Placa Titular";
+    document.getElementById('titleMot').textContent = "👨‍✈️ Cadastrar Motorista, Placa & Tipologia";
     document.getElementById('btnSalvarMot').textContent = "Salvar Motorista";
     document.getElementById('btnCancelMot').style.display = "none";
   }
 
   db.ref('cadastro_motoristas').on('value', snapshot => {
-    const tbody = document.getElementById('tbMotoristas');
-    tbody.innerHTML = '';
+    const container = document.getElementById('containerMotoristasPorTipologia');
+    container.innerHTML = '';
     const data = snapshot.val();
     cacheMotoristas = data || {};
 
-    if (!data) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#777;">Nenhum motorista cadastrado.</td></tr>'; return; }
+    if (!data) { 
+      container.innerHTML = '<p style="color:#777; text-align:center;">Nenhum motorista cadastrado.</p>'; 
+      return; 
+    }
 
-    const listaOrdenada = Object.keys(data).map(key => {
-      return { key: key, ...data[key] };
-    }).sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR', { sensitivity: 'base' }));
+    // Agrupa por Tipologia
+    const grupos = {};
+    Object.keys(data).forEach(key => {
+      const m = { key: key, ...data[key] };
+      const tipo = m.tipologia || 'Outro';
+      if (!grupos[tipo]) grupos[tipo] = [];
+      grupos[tipo].push(m);
+    });
 
-    listaOrdenada.forEach(m => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td><b>${m.nome}</b></td>
-        <td><span class="badge badge-info">${m.placa}</span></td>
-        <td>${m.modelo || '-'}</td>
-        <td>
-          <button class="btn-warning" onclick="editarMot('${m.key}')">Editar</button>
-          <button class="btn-danger" onclick="removerMot('${m.key}')">Excluir</button>
-        </td>
+    // Ordena as tipologias
+    const tipologiasOrdenadas = Object.keys(grupos).sort();
+
+    tipologiasOrdenadas.forEach(tipo => {
+      // Ordena os motoristas de cada tipologia em ordem alfabética
+      const motoristasDoGrupo = grupos[tipo].sort((a, b) => 
+        (a.nome || '').localeCompare(b.nome || '', 'pt-BR', { sensitivity: 'base' })
+      );
+
+      const grupoDiv = document.createElement('div');
+      grupoDiv.innerHTML = `
+        <div class="tipologia-group-title">
+          <span>🚚 TIPOLOGIA: ${tipo.toUpperCase()}</span>
+          <span style="font-size:12px; font-weight:normal; background:rgba(255,255,255,0.2); padding:3px 8px; border-radius:10px;">${motoristasDoGrupo.length} motorista(s)</span>
+        </div>
       `;
-      tbody.appendChild(tr);
+
+      const tabela = document.createElement('table');
+      tabela.innerHTML = `
+        <thead>
+          <tr>
+            <th>Motorista</th>
+            <th>Placa Vinculada</th>
+            <th>Vínculo</th>
+            <th>Modelo / Obs</th>
+            <th style="width:140px;">Ações</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      `;
+
+      const tbody = tabela.querySelector('tbody');
+
+      motoristasDoGrupo.forEach(m => {
+        const tr = document.createElement('tr');
+        const badgeVinculo = (m.vinculo === 'Da Casa') 
+          ? `<span class="badge badge-casa">🏠 DA CASA</span>` 
+          : (m.vinculo === 'Agregado' ? `<span class="badge badge-info">🤝 AGREGADO</span>` : `<span class="badge badge-terceiro">🚚 TERCEIRO</span>`);
+
+        tr.innerHTML = `
+          <td><b>${m.nome}</b></td>
+          <td><span class="badge badge-info">${m.placa}</span></td>
+          <td>${badgeVinculo}</td>
+          <td>${m.modelo || '-'}</td>
+          <td>
+            <button class="btn-warning" onclick="editarMot('${m.key}')">Editar</button>
+            <button class="btn-danger" onclick="removerMot('${m.key}')">Excluir</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      grupoDiv.appendChild(tabela);
+      container.appendChild(grupoDiv);
     });
 
     renderizarRelatorioPlanilhas();
+    renderizarResumoSaidasPlanilha();
   });
 
   function removerMot(key) {
     if (confirm('Deseja excluir este motorista?')) db.ref(`cadastro_motoristas/${key}`).remove();
   }
 
-  // --- MÓDULO IMPORTAÇÃO & CONSOLIDAÇÃO (ATUALIZAÇÃO AUTOMÁTICA DA ABA 1) ---
+  // --- MÓDULO IMPORTAÇÃO & CONSOLIDAÇÃO ---
   function processarPlanilha() {
     const mesAno = document.getElementById('impMesAno').value;
     const fileInput = document.getElementById('impFile');
@@ -929,11 +1008,11 @@
 
       db.ref(`importacao_planilhas/${mesAno}`).set(payload)
         .then(() => {
-          alert(`Planilha de ${mesAno} processada com sucesso!\nAs saídas e veículos da Aba 1 foram atualizados automaticamente.`);
+          alert(`Planilha de ${mesAno} processada com sucesso!\nAs saídas por motorista foram atualizadas.`);
           document.getElementById('filtroMesRelatorio').value = mesAno;
           document.getElementById('filtroMesSaidas').value = mesAno;
           fileInput.value = '';
-          switchTab('tabPainel', document.querySelector('.tab-btn')); // Retorna para o painel principal
+          switchTab('tabPainel', document.querySelector('.tab-btn'));
         });
     };
 
@@ -959,7 +1038,7 @@
       document.getElementById('kpiTotalEntregasMes').textContent = '0 entregas';
       document.getElementById('kpiMediaEntregas').textContent = '0 / saída';
       tbodyDia.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#777;">Nenhuma planilha importada para este mês.</td></tr>';
-      tbodyPlaca.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#777;">Sem dados de placas para este mês.</td></tr>';
+      tbodyPlaca.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#777;">Sem dados de placas para este mês.</td></tr>';
       return;
     }
 
@@ -975,7 +1054,9 @@
     const mapaPlacaMotorista = {};
     Object.keys(cacheMotoristas).forEach(k => {
       const m = cacheMotoristas[k];
-      if (m.placa) mapaPlacaMotorista[m.placa.toUpperCase()] = m.nome;
+      if (m.placa) {
+        mapaPlacaMotorista[m.placa.toUpperCase()] = { nome: m.nome, tipologia: m.tipologia || '-', vinculo: m.vinculo || 'Da Casa' };
+      }
     });
 
     listaRegistros.forEach(item => {
@@ -992,8 +1073,8 @@
       const pUpper = item.placa.toUpperCase();
       if (pUpper) diasAgrupados[diaChave].placasSet.add(pUpper);
       
-      const nomeMot = mapaPlacaMotorista[pUpper] || item.motorista || 'Sem Cadastro';
-      diasAgrupados[diaChave].motoristasSet.add(nomeMot);
+      const infoMot = mapaPlacaMotorista[pUpper] ? mapaPlacaMotorista[pUpper].nome : (item.motorista || 'Sem Cadastro');
+      diasAgrupados[diaChave].motoristasSet.add(infoMot);
 
       if (!placasAgrupadas[pUpper]) { placasAgrupadas[pUpper] = { saidas: 0, entregas: 0 }; }
       placasAgrupadas[pUpper].saidas += item.saidas;
@@ -1009,13 +1090,19 @@
     listaPlacasKeys.forEach(pKey => {
       const infoP = placasAgrupadas[pKey];
       const medP = infoP.saidas > 0 ? (infoP.entregas / infoP.saidas).toFixed(1) : 0;
-      const motoristaNome = mapaPlacaMotorista[pKey] || 'Motorista Não Cadastrado';
+      const cad = mapaPlacaMotorista[pKey] || { nome: 'Motorista Não Cadastrado', tipologia: '-', vinculo: '-' };
+
+      // Regra de destaque em vermelho para saídas < 15
+      const classeSaida = infoP.saidas < 15 ? 'saida-red' : 'saida-green';
+      const badgeSaida = infoP.saidas < 15 ? `<span class="badge badge-danger">⚠️ ${infoP.saidas} saída(s)</span>` : `<b>${infoP.saidas} saída(s)</b>`;
 
       const trP = document.createElement('tr');
       trP.innerHTML = `
         <td><span class="badge badge-info">${pKey}</span></td>
-        <td><b>${motoristaNome}</b></td>
-        <td><b>${infoP.saidas} saída(s)</b></td>
+        <td><b>${cad.nome}</b></td>
+        <td><span class="badge badge-done">${cad.tipologia}</span></td>
+        <td><small>${cad.vinculo}</small></td>
+        <td class="${classeSaida}">${badgeSaida}</td>
         <td><span class="badge badge-ok">${infoP.entregas} entrega(s)</span></td>
         <td><b>${medP}</b> entregas/saída</td>
       `;
@@ -1041,7 +1128,7 @@
     });
   }
 
-  // --- ATUALIZAÇÃO AUTOMÁTICA DOS TOTAIS DE SAÍDAS NA ABA 1 ---
+  // --- EXIBIÇÃO DE SAÍDAS COM REGRA < 15 SAÍDAS EM VERMELHO ---
   function renderizarResumoSaidasPlanilha() {
     const mesFiltro = document.getElementById('filtroMesSaidas').value;
     const driverSummary = document.getElementById('driverSummary');
@@ -1052,7 +1139,7 @@
 
     if (!mesFiltro || !cachePlanilhas[mesFiltro]) {
       driverSummary.innerHTML = '<p style="color:#777;">Nenhuma planilha importada para o mês selecionado.</p>';
-      tbodyVeiculos.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#777;">Nenhum dado de veículo para este mês.</td></tr>';
+      tbodyVeiculos.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#777;">Nenhum dado de veículo para este mês.</td></tr>';
       return;
     }
 
@@ -1063,55 +1150,65 @@
     const mapaPlacaMotorista = {};
     Object.keys(cacheMotoristas).forEach(k => {
       const m = cacheMotoristas[k];
-      if (m.placa) mapaPlacaMotorista[m.placa.toUpperCase()] = m.nome;
+      if (m.placa) {
+        mapaPlacaMotorista[m.placa.toUpperCase()] = { nome: m.nome, tipologia: m.tipologia || '-', vinculo: m.vinculo || 'Da Casa' };
+      }
     });
 
     registros.forEach(item => {
       const pUpper = item.placa.toUpperCase();
-      const nomeMot = mapaPlacaMotorista[pUpper] || item.motorista || 'Motorista Não Identificado';
+      const cad = mapaPlacaMotorista[pUpper] || { nome: item.motorista || 'Não Identificado', tipologia: '-', vinculo: '-' };
       
       // Contagem por Motorista
-      if (!motoristasContagem[nomeMot]) { motoristasContagem[nomeMot] = 0; }
-      motoristasContagem[nomeMot] += item.saidas;
+      if (!motoristasContagem[cad.nome]) { motoristasContagem[cad.nome] = 0; }
+      motoristasContagem[cad.nome] += item.saidas;
 
-      // Contagem por Veículo/Placa
+      // Contagem por Veículo
       if (!veiculosContagem[pUpper]) {
-        veiculosContagem[pUpper] = { totalSaidas: 0, motorista: nomeMot };
+        veiculosContagem[pUpper] = { totalSaidas: 0, motorista: cad.nome, tipologia: cad.tipologia, vinculo: cad.vinculo };
       }
       veiculosContagem[pUpper].totalSaidas += item.saidas;
     });
 
-    // Renderiza Cards dos Motoristas na Aba 1
-    const listaMots = Object.keys(motoristasContagem).sort();
+    // Renderiza Cards dos Motoristas em Ordem Alfabética com Alerta em Vermelho < 15 Saídas
+    const listaMots = Object.keys(motoristasContagem).sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' }));
+    
     if (listaMots.length === 0) {
       driverSummary.innerHTML = '<p style="color:#777;">Nenhuma saída neste mês.</p>';
     } else {
       listaMots.forEach(nome => {
+        const totalS = motoristasContagem[nome];
+        const ehBaixaSaida = totalS < 15;
+
         const card = document.createElement('div');
-        card.className = 'driver-card';
+        card.className = `driver-card ${ehBaixaSaida ? 'card-baixa-saida' : ''}`;
         card.innerHTML = `
           <div class="driver-card-header">
             <span class="driver-name">${nome}</span>
-            <span class="driver-count">${motoristasContagem[nome]} saída(s)</span>
+            <span class="driver-count ${ehBaixaSaida ? 'count-red' : ''}">${totalS} saída(s) ${ehBaixaSaida ? '⚠️' : ''}</span>
           </div>
-          <div class="driver-last-update">Atualizado via Planilha Mensal</div>
+          <div class="driver-last-update">${ehBaixaSaida ? '🚨 Menos de 15 saídas no mês' : '✅ Meta de saídas atingida'}</div>
         `;
         driverSummary.appendChild(card);
       });
     }
 
-    // Renderiza Tabela de Veículos na Aba 1
+    // Renderiza Tabela Consolidada de Veículos com Destaque
     const listaPlacas = Object.keys(veiculosContagem).sort();
     if (listaPlacas.length === 0) {
-      tbodyVeiculos.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#777;">Nenhum registro.</td></tr>';
+      tbodyVeiculos.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#777;">Nenhum registro.</td></tr>';
     } else {
       listaPlacas.forEach(placa => {
         const infoV = veiculosContagem[placa];
+        const ehBaixa = infoV.totalSaidas < 15;
+
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td><span class="badge badge-info">${placa}</span></td>
-          <td><b>${infoV.totalSaidas} saída(s)</b></td>
-          <td>${infoV.motorista}</td>
+          <td class="${ehBaixa ? 'saida-red' : 'saida-green'}"><b>${infoV.totalSaidas} saída(s) ${ehBaixa ? '🚨 (Abaixo de 15)' : ''}</b></td>
+          <td><b>${infoV.motorista}</b></td>
+          <td><span class="badge badge-done">${infoV.tipologia}</span></td>
+          <td><small>${infoV.vinculo}</small></td>
         `;
         tbodyVeiculos.appendChild(tr);
       });
@@ -1283,7 +1380,7 @@
     document.getElementById('kpiTotalFrota').textContent = `${total} veículo(s)`;
   });
 
-  // --- MÓDULO FINANCEIRO (TRANSPORTE X CDR & STATUS PAGO/PENDENTE/ATRASADO) ---
+  // --- MÓDULO FINANCEIRO ---
   function toggleFormaPagamento() {
     document.getElementById('lblDataPagamento').textContent = (document.getElementById('formaPagamento').value === 'PIX') ? 'Data Pagamento PIX' : 'Data Vencimento';
   }
