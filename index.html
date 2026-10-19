@@ -178,9 +178,9 @@
       </table>
     </div>
 
-    <!-- 2. GESTÃO FINANCEIRA -->
+    <!-- 2. GESTÃO FINANCEIRA COM FORNECEDOR E NOTAS SEPARADAS (PEÇAS / SERVIÇOS) -->
     <div class="card">
-      <h2 id="titleFinanceiro">2. Lançamento Financeiro & Controle de Notas (Transporte / CDR)</h2>
+      <h2 id="titleFinanceiro">2. Lançamento Financeiro & Controle de Notas (Fornecedor / Peças / Serviços)</h2>
       <form id="financeForm">
         <input type="hidden" id="editFinanceiroKey">
         <div class="form-grid">
@@ -192,16 +192,28 @@
             </select>
           </div>
           <div class="form-group">
-            <label>Nº Pedido / Nota Fiscal / Descrição</label>
-            <input type="text" id="numPedido" placeholder="Ex: NF-12345 / Peças Iveco" required>
+            <label>Nome do Fornecedor / Oficina</label>
+            <input type="text" id="finFornecedor" placeholder="Ex: Auto Peças Araraquara / Oficina X" required>
+          </div>
+          <div class="form-group">
+            <label>Nº Nota Peças (Opcional)</label>
+            <input type="text" id="numNotaPecas" placeholder="Ex: NF-123 (Peças)">
+          </div>
+          <div class="form-group">
+            <label>Valor Peças (R$)</label>
+            <input type="text" id="valorPecas" placeholder="Ex: 500,00">
+          </div>
+          <div class="form-group">
+            <label>Nº Nota Serviço (Opcional)</label>
+            <input type="text" id="numNotaServico" placeholder="Ex: NFS-456 (Mão de Obra)">
+          </div>
+          <div class="form-group">
+            <label>Valor Serviço (R$)</label>
+            <input type="text" id="valorServico" placeholder="Ex: 300,00">
           </div>
           <div class="form-group">
             <label>Data de Emissão</label>
             <input type="date" id="dataEmissao" required>
-          </div>
-          <div class="form-group">
-            <label>Valor Total (R$)</label>
-            <input type="text" id="valorPagamento" placeholder="Ex: 1500,00 ou 1.500,00" required>
           </div>
           <div class="form-group">
             <label>Forma de Pagamento</label>
@@ -253,22 +265,23 @@
     </div>
 
     <div class="card">
-      <h2>Controle de Contas, Boletos e Status de Pagamento</h2>
+      <h2>Controle de Contas, Boletos e Notas por Fornecedor</h2>
       <table>
         <thead>
           <tr>
             <th>Setor</th>
-            <th>Nº Pedido / NF</th>
-            <th>Data Emissão</th>
-            <th>Valor (R$)</th>
-            <th>Forma Pagamento</th>
-            <th>Vencimento / Data</th>
-            <th>Status Pagamento</th>
+            <th>Fornecedor</th>
+            <th>Nota Peças / Valor</th>
+            <th>Nota Serviço / Valor</th>
+            <th>Valor Total</th>
+            <th>Emissão</th>
+            <th>Vencimento</th>
+            <th>Status</th>
             <th>Ações</th>
           </tr>
         </thead>
         <tbody id="tbFinanceiro">
-          <tr><td colspan="8" style="text-align:center; color:#777;">Carregando dados...</td></tr>
+          <tr><td colspan="9" style="text-align:center; color:#777;">Carregando dados...</td></tr>
         </tbody>
       </table>
     </div>
@@ -536,7 +549,7 @@
           </tr>
         </thead>
         <tbody id="tbDescartePneus">
-          <tr><td colspan="6" style="text-align:center; color:#777;">Carregando descartes...</td></tr>
+          <tr><td colspan="6" style="text-align:center; color:#777;">Nenhum descarte.</td></tr>
         </tbody>
       </table>
     </div>
@@ -802,7 +815,7 @@
     document.getElementById('filtroMesSaidas').value = hojeMes;
   });
 
-  // --- MÓDULO MOTORISTAS (EDIÇÃO CORRIGIDA) ---
+  // --- MÓDULO MOTORISTAS (COM TIPOLOGIA, VÍNCULO E ORDEM ALFABÉTICA) ---
   function salvarMotorista() {
     const key = document.getElementById('editMotKey').value;
     const nome = document.getElementById('motNome').value.trim();
@@ -824,7 +837,6 @@
     const m = cacheMotoristas[key];
     if (!m) return;
     
-    // Garantir a mudança de aba para onde está o formulário
     switchTab('tabMotoristas', document.querySelectorAll('.tab-btn')[1]);
 
     document.getElementById('editMotKey').value = key;
@@ -838,7 +850,6 @@
     document.getElementById('btnSalvarMot').textContent = "Atualizar Motorista";
     document.getElementById('btnCancelMot').style.display = "inline-block";
 
-    // Rolar a tela de volta ao topo para o formulário
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -861,7 +872,6 @@
       return; 
     }
 
-    // Agrupa por Tipologia
     const grupos = {};
     Object.keys(data).forEach(key => {
       const m = { key: key, ...data[key] };
@@ -1223,6 +1233,146 @@
     }
   }
 
+  // --- MÓDULO FINANCEIRO (COM FORNECEDOR E NOTAS SEPARADAS) ---
+  function toggleFormaPagamento() {
+    document.getElementById('lblDataPagamento').textContent = (document.getElementById('formaPagamento').value === 'PIX') ? 'Data Pagamento PIX' : 'Data Vencimento';
+  }
+
+  function addFinanceiro() {
+    const key = document.getElementById('editFinanceiroKey').value;
+    const setor = document.getElementById('finSetor').value;
+    const fornecedor = document.getElementById('finFornecedor').value.trim();
+    const numNotaPecas = document.getElementById('numNotaPecas').value.trim();
+    const valorPecas = parseValorBR(document.getElementById('valorPecas').value);
+    const numNotaServico = document.getElementById('numNotaServico').value.trim();
+    const valorServico = parseValorBR(document.getElementById('valorServico').value);
+    const dataEmissao = document.getElementById('dataEmissao').value;
+    const formaPagamento = document.getElementById('formaPagamento').value;
+    const dataVencimento = document.getElementById('dataVencimento').value;
+    const status = document.getElementById('finStatus').value;
+
+    if (!fornecedor || !dataEmissao || !dataVencimento) { alert('Preencha o Fornecedor, Data de Emissão e Vencimento!'); return; }
+    
+    const valorTotal = valorPecas + valorServico;
+    if (valorTotal <= 0) { alert('Informe ao menos o valor de Peças ou de Serviço!'); return; }
+
+    const payload = { setor, fornecedor, numNotaPecas, valorPecas, numNotaServico, valorServico, valorTotal, dataEmissao, formaPagamento, dataVencimento, status };
+    if (key) { db.ref(`financeiro/${key}`).update(payload); } else { db.ref('financeiro').push(payload); }
+    cancelarEdicaoFinanceiro();
+  }
+
+  function editarFinanceiro(key) {
+    const item = cacheFinanceiro[key];
+    if (!item) return;
+    document.getElementById('editFinanceiroKey').value = key;
+    document.getElementById('finSetor').value = item.setor || 'Transporte';
+    document.getElementById('finFornecedor').value = item.fornecedor || '';
+    document.getElementById('numNotaPecas').value = item.numNotaPecas || '';
+    document.getElementById('valorPecas').value = item.valorPecas ? formatarMoeda(item.valorPecas) : '';
+    document.getElementById('numNotaServico').value = item.numNotaServico || '';
+    document.getElementById('valorServico').value = item.valorServico ? formatarMoeda(item.valorServico) : '';
+    document.getElementById('dataEmissao').value = item.dataEmissao || '';
+    document.getElementById('formaPagamento').value = item.formaPagamento || 'Boleto';
+    document.getElementById('dataVencimento').value = item.dataVencimento || '';
+    document.getElementById('finStatus').value = item.status || 'Pendente';
+    toggleFormaPagamento();
+    document.getElementById('titleFinanceiro').textContent = "2. Editar Lançamento Financeiro";
+    document.getElementById('btnSalvarFinanceiro').textContent = "Atualizar Registro";
+    document.getElementById('btnCancelFinanceiro').style.display = "inline-block";
+  }
+
+  function cancelarEdicaoFinanceiro() {
+    document.getElementById('editFinanceiroKey').value = '';
+    document.getElementById('financeForm').reset();
+    toggleFormaPagamento();
+    document.getElementById('titleFinanceiro').textContent = "2. Lançamento Financeiro & Controle de Notas (Fornecedor / Peças / Serviços)";
+    document.getElementById('btnSalvarFinanceiro').textContent = "Salvar Lançamento";
+    document.getElementById('btnCancelFinanceiro').style.display = "none";
+  }
+
+  function alternarStatusFinanceiro(key, statusAtual) {
+    const novoStatus = (statusAtual === 'Pago') ? 'Pendente' : 'Pago';
+    db.ref(`financeiro/${key}`).update({ status: novoStatus });
+  }
+
+  db.ref('financeiro').on('value', snapshot => {
+    const tbody = document.getElementById('tbFinanceiro');
+    tbody.innerHTML = '';
+    const data = snapshot.val();
+    cacheFinanceiro = data || {};
+    if (!data) { 
+      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:#777;">Nenhum lançamento financeiro.</td></tr>'; 
+      calcularTotaisFinanceiros();
+      return; 
+    }
+
+    Object.keys(data).forEach(key => {
+      const item = data[key];
+      const diffDias = calcularDiasDiferenca(item.dataVencimento);
+      const ehPago = item.status === 'Pago';
+      const ehAtrasado = !ehPago && diffDias > 0;
+
+      let badgeStatus = '';
+      if (ehPago) {
+        badgeStatus = `<span class="badge badge-ok">🟢 PAGO</span>`;
+      } else if (ehAtrasado) {
+        badgeStatus = `<span class="badge badge-danger">🔴 ATRASADO (${diffDias}d)</span>`;
+      } else {
+        badgeStatus = `<span class="badge badge-alert">🟡 PENDENTE</span>`;
+      }
+
+      const badgeSetor = (item.setor === 'CDR') ? `<span class="badge badge-purple">CDR</span>` : `<span class="badge badge-info">TRANSPORTE</span>`;
+
+      const txtPecas = item.numNotaPecas ? `<b>${item.numNotaPecas}</b>: R$ ${formatarMoeda(item.valorPecas)}` : '-';
+      const txtServ = item.numNotaServico ? `<b>${item.numNotaServico}</b>: R$ ${formatarMoeda(item.valorServico)}` : '-';
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${badgeSetor}</td>
+        <td><b>${item.fornecedor}</b></td>
+        <td>${txtPecas}</td>
+        <td>${txtServ}</td>
+        <td><b>R$ ${formatarMoeda(item.valorTotal || (item.valorPecas + item.valorServico))}</b></td>
+        <td>${item.dataEmissao ? item.dataEmissao.split('-').reverse().join('/') : '-'}</td>
+        <td>${item.dataVencimento ? item.dataVencimento.split('-').reverse().join('/') : 'N/A'}</td>
+        <td>${badgeStatus}</td>
+        <td>
+          <button class="btn-toggle" onclick="alternarStatusFinanceiro('${key}', '${item.status}')">${ehPago ? 'Pendente' : 'Pago'}</button>
+          <button class="btn-warning" onclick="editarFinanceiro('${key}')">Editar</button>
+          <button class="btn-danger" onclick="removerItem('financeiro', '${key}')">Excluir</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    calcularTotaisFinanceiros();
+  });
+
+  function calcularTotaisFinanceiros() {
+    const filtroMes = document.getElementById('filtroMesFinanceiro').value;
+    let totalTransporte = 0;
+    let totalCDR = 0;
+    let totalGeral = 0;
+
+    Object.keys(cacheFinanceiro).forEach(k => {
+      const item = cacheFinanceiro[k];
+      const dtRef = item.dataVencimento || item.dataEmissao;
+      if (dtRef && dtRef.substring(0, 7) === filtroMes) {
+        const val = item.valorTotal || (parseValorBR(item.valorPecas) + parseValorBR(item.valorServico));
+        totalGeral += val;
+        if (item.setor === 'CDR') {
+          totalCDR += val;
+        } else {
+          totalTransporte += val;
+        }
+      }
+    });
+
+    document.getElementById('kpiTotalFinanceiroMes').textContent = `R$ ${formatarMoeda(totalGeral)}`;
+    document.getElementById('kpiTotalTransporteMes').textContent = `R$ ${formatarMoeda(totalTransporte)}`;
+    document.getElementById('kpiTotalCDRMes').textContent = `R$ ${formatarMoeda(totalCDR)}`;
+  }
+
   // --- AGENDA DE TAREFAS ---
   function addAgenda() {
     const key = document.getElementById('editAgendaKey').value;
@@ -1377,133 +1527,6 @@
     document.getElementById('kpiIndisponiveis').textContent = `${indisp} parado(s)`;
     document.getElementById('kpiTotalFrota').textContent = `${total} veículo(s)`;
   });
-
-  // --- MÓDULO FINANCEIRO ---
-  function toggleFormaPagamento() {
-    document.getElementById('lblDataPagamento').textContent = (document.getElementById('formaPagamento').value === 'PIX') ? 'Data Pagamento PIX' : 'Data Vencimento';
-  }
-
-  function addFinanceiro() {
-    const key = document.getElementById('editFinanceiroKey').value;
-    const setor = document.getElementById('finSetor').value;
-    const numPedido = document.getElementById('numPedido').value.trim();
-    const dataEmissao = document.getElementById('dataEmissao').value;
-    const valorPagamento = parseValorBR(document.getElementById('valorPagamento').value);
-    const formaPagamento = document.getElementById('formaPagamento').value;
-    const dataVencimento = document.getElementById('dataVencimento').value;
-    const status = document.getElementById('finStatus').value;
-
-    if (!numPedido || !dataEmissao || !dataVencimento) { alert('Preencha todos os campos obrigatórios!'); return; }
-    
-    const payload = { setor, numPedido, dataEmissao, valorPagamento, formaPagamento, dataVencimento, status };
-    if (key) { db.ref(`financeiro/${key}`).update(payload); } else { db.ref('financeiro').push(payload); }
-    cancelarEdicaoFinanceiro();
-  }
-
-  function editarFinanceiro(key) {
-    const item = cacheFinanceiro[key];
-    if (!item) return;
-    document.getElementById('editFinanceiroKey').value = key;
-    document.getElementById('finSetor').value = item.setor || 'Transporte';
-    document.getElementById('numPedido').value = item.numPedido || '';
-    document.getElementById('dataEmissao').value = item.dataEmissao || '';
-    document.getElementById('valorPagamento').value = item.valorPagamento ? formatarMoeda(item.valorPagamento) : '';
-    document.getElementById('formaPagamento').value = item.formaPagamento || 'Boleto';
-    document.getElementById('dataVencimento').value = item.dataVencimento || '';
-    document.getElementById('finStatus').value = item.status || 'Pendente';
-    toggleFormaPagamento();
-    document.getElementById('titleFinanceiro').textContent = "2. Editar Lançamento Financeiro";
-    document.getElementById('btnSalvarFinanceiro').textContent = "Atualizar Registro";
-    document.getElementById('btnCancelFinanceiro').style.display = "inline-block";
-  }
-
-  function cancelarEdicaoFinanceiro() {
-    document.getElementById('editFinanceiroKey').value = '';
-    document.getElementById('financeForm').reset();
-    toggleFormaPagamento();
-    document.getElementById('titleFinanceiro').textContent = "2. Lançamento Financeiro & Controle de Notas (Transporte / CDR)";
-    document.getElementById('btnSalvarFinanceiro').textContent = "Salvar Lançamento";
-    document.getElementById('btnCancelFinanceiro').style.display = "none";
-  }
-
-  function alternarStatusFinanceiro(key, statusAtual) {
-    const novoStatus = (statusAtual === 'Pago') ? 'Pendente' : 'Pago';
-    db.ref(`financeiro/${key}`).update({ status: novoStatus });
-  }
-
-  db.ref('financeiro').on('value', snapshot => {
-    const tbody = document.getElementById('tbFinanceiro');
-    tbody.innerHTML = '';
-    const data = snapshot.val();
-    cacheFinanceiro = data || {};
-    if (!data) { 
-      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#777;">Nenhum lançamento financeiro.</td></tr>'; 
-      calcularTotaisFinanceiros();
-      return; 
-    }
-
-    Object.keys(data).forEach(key => {
-      const item = data[key];
-      const diffDias = calcularDiasDiferenca(item.dataVencimento);
-      const ehPago = item.status === 'Pago';
-      const ehAtrasado = !ehPago && diffDias > 0;
-
-      let badgeStatus = '';
-      if (ehPago) {
-        badgeStatus = `<span class="badge badge-ok">🟢 PAGO</span>`;
-      } else if (ehAtrasado) {
-        badgeStatus = `<span class="badge badge-danger">🔴 ATRASADO (${diffDias}d)</span>`;
-      } else {
-        badgeStatus = `<span class="badge badge-alert">🟡 PENDENTE</span>`;
-      }
-
-      const badgeSetor = (item.setor === 'CDR') ? `<span class="badge badge-purple">CDR</span>` : `<span class="badge badge-info">TRANSPORTE</span>`;
-
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${badgeSetor}</td>
-        <td><b>${item.numPedido}</b></td>
-        <td>${item.dataEmissao ? item.dataEmissao.split('-').reverse().join('/') : '-'}</td>
-        <td><b>R$ ${formatarMoeda(item.valorPagamento)}</b></td>
-        <td><span class="badge ${item.formaPagamento === 'PIX' ? 'badge-ok' : 'badge-info'}">${item.formaPagamento}</span></td>
-        <td>${item.dataVencimento ? item.dataVencimento.split('-').reverse().join('/') : 'N/A'}</td>
-        <td>${badgeStatus}</td>
-        <td>
-          <button class="btn-toggle" onclick="alternarStatusFinanceiro('${key}', '${item.status}')">${ehPago ? 'Marcar Pendente' : 'Marcar Pago'}</button>
-          <button class="btn-warning" onclick="editarFinanceiro('${key}')">Editar</button>
-          <button class="btn-danger" onclick="removerItem('financeiro', '${key}')">Excluir</button>
-        </td>
-      `;
-      tbody.appendChild(tr);
-    });
-
-    calcularTotaisFinanceiros();
-  });
-
-  function calcularTotaisFinanceiros() {
-    const filtroMes = document.getElementById('filtroMesFinanceiro').value;
-    let totalTransporte = 0;
-    let totalCDR = 0;
-    let totalGeral = 0;
-
-    Object.keys(cacheFinanceiro).forEach(k => {
-      const item = cacheFinanceiro[k];
-      const dtRef = item.dataVencimento || item.dataEmissao;
-      if (dtRef && dtRef.substring(0, 7) === filtroMes) {
-        const val = parseValorBR(item.valorPagamento);
-        totalGeral += val;
-        if (item.setor === 'CDR') {
-          totalCDR += val;
-        } else {
-          totalTransporte += val;
-        }
-      }
-    });
-
-    document.getElementById('kpiTotalFinanceiroMes').textContent = `R$ ${formatarMoeda(totalGeral)}`;
-    document.getElementById('kpiTotalTransporteMes').textContent = `R$ ${formatarMoeda(totalTransporte)}`;
-    document.getElementById('kpiTotalCDRMes').textContent = `R$ ${formatarMoeda(totalCDR)}`;
-  }
 
   // --- MANUTENÇÃO ---
   function addManutencao() {
