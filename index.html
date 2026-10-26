@@ -1,176 +1,456 @@
 <!DOCTYPE html>
-<html lang="pt-BR" class="dark">
+<html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gestão & Planejamento Financeiro</title>
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          colors: {
-            brand: {
-              50: '#ecfdf5', 100: '#d1fae5', 500: '#10b981',
-              600: '#059669', 700: '#047857', 800: '#065f46', 900: '#064e3b'
-            }
-          }
-        }
-      }
-    }
-  </script>
-  <!-- FontAwesome Icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <title>Sistema Integrado de Gestão de Frota & Logística</title>
+  
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <!-- SheetJS para leitura e processamento de planilhas Excel/CSV -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <style>
+    * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
+    body { background-color: #f4f6f9; padding: 20px; color: #333; }
+    h1, h2, h3 { margin-bottom: 15px; color: #1a252f; }
+    .container { max-width: 1250px; margin: 0 auto; }
+    
+    .header-bar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 20px; gap: 15px; }
+    
+    /* NAVEGAÇÃO DE ABAS */
+    .nav-tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #ccc; padding-bottom: 5px; flex-wrap: wrap; }
+    .tab-btn { background: #e0e0e0; color: #333; border: none; padding: 12px 20px; font-weight: bold; font-size: 14px; border-radius: 6px 6px 0 0; cursor: pointer; }
+    .tab-btn.active { background: #2c3e50; color: white; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    .card { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 25px; }
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+    .form-group { display: flex; flex-direction: column; }
+    .form-group label { font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #2c3e50; }
+    .form-group input, .form-group select, .form-group textarea { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+    
+    button { background: #27ae60; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; margin-top: 15px; font-weight: bold; }
+    button:hover { background: #219150; }
+    .btn-danger { background: #e74c3c; margin-top: 0; padding: 5px 10px; font-size: 12px; }
+    .btn-danger:hover { background: #c0392b; }
+    .btn-warning { background: #f39c12; margin-top: 0; padding: 5px 10px; font-size: 12px; margin-right: 5px; color: white; }
+    .btn-warning:hover { background: #d68910; }
+    .btn-toggle { background: #2980b9; margin-top: 0; padding: 5px 10px; font-size: 12px; margin-right: 5px; color: white; }
+    .btn-toggle:hover { background: #1f618d; }
+    .btn-cancel { background: #7f8c8d; margin-top: 15px; margin-left: 10px; }
+    .btn-cancel:hover { background: #95a5a6; }
+    
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; background: #fff; }
+    th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #ddd; font-size: 13px; }
+    th { background-color: #2c3e50; color: white; }
+    tr:nth-child(even) { background-color: #f9f9f9; }
+    
+    .badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; color: white; display: inline-block; }
+    .badge-ok { background-color: #27ae60; }
+    .badge-alert { background-color: #f39c12; }
+    .badge-danger { background-color: #e74c3c; }
+    .badge-info { background-color: #2980b9; }
+    .badge-done { background-color: #7f8c8d; }
+    .badge-purple { background-color: #8e44ad; }
+    .badge-casa { background-color: #27ae60; }
+    .badge-terceiro { background-color: #e67e22; }
+    
+    .summary-box { display: flex; gap: 15px; margin-top: 15px; flex-wrap: wrap; }
+    .kpi-card { flex: 1; min-width: 200px; background: #ecf0f1; padding: 15px; border-radius: 6px; border-left: 5px solid #2980b9; }
+    .kpi-card h4 { font-size: 12px; text-transform: uppercase; color: #7f8c8d; }
+    .kpi-card p { font-size: 20px; font-weight: bold; color: #2c3e50; margin-top: 5px; }
+    .kpi-warning { border-left-color: #e74c3c; }
+    .kpi-success { border-left-color: #27ae60; }
+    .kpi-purple { border-left-color: #8e44ad; }
+    .sync-status { display: inline-block; padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-left: 10px; background: #27ae60; color: white; }
+    
+    .driver-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; margin-top: 10px; }
+    .driver-card { background: #f8f9fa; border: 1px solid #e2e8f0; border-left: 4px solid #27ae60; padding: 10px 15px; border-radius: 6px; display: flex; flex-direction: column; justify-content: center; }
+    .driver-card.card-baixa-saida { border-left-color: #e74c3c; background-color: #fdf2f2; }
+    .driver-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+    .driver-name { font-weight: bold; color: #2c3e50; font-size: 14px; }
+    .driver-count { background: #27ae60; color: white; padding: 3px 10px; border-radius: 12px; font-weight: bold; font-size: 12px; }
+    .driver-count.count-red { background: #e74c3c; }
+    .driver-last-update { font-size: 11px; color: #7f8c8d; text-align: right; margin-top: 4px; }
+    
+    .card-header-flex { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+    .tipologia-group-title { background: #34495e; color: #fff; padding: 10px 15px; border-radius: 6px; margin-top: 20px; margin-bottom: 10px; font-size: 15px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+    .saida-red { color: #e74c3c; font-weight: bold; }
+    .saida-green { color: #27ae60; font-weight: bold; }
+  </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen font-sans flex flex-col antialiased">
+<body>
 
-  <!-- Ecrã de Segurança / Bloqueio por Senha -->
-  <div id="auth-screen" class="fixed inset-0 z-50 bg-slate-950 flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-800 p-8 rounded-2xl max-w-md w-full space-y-6 shadow-2xl">
-      <div class="text-center space-y-2">
-        <div class="inline-flex p-3 bg-emerald-500/10 rounded-2xl border border-emerald-500/20 text-emerald-400 mb-1">
-          <i class="fa-solid fa-lock text-2xl"></i>
-        </div>
-        <h2 id="auth-title" class="text-2xl font-bold bg-gradient-to-r from-emerald-400 to-teal-200 bg-clip-text text-transparent">
-          Área Protegida
-        </h2>
-        <p id="auth-subtitle" class="text-xs text-slate-400">Insira a sua senha secreta para aceder ao planeador</p>
-      </div>
-
-      <div id="auth-error" class="hidden p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs text-center"></div>
-
-      <form id="auth-form" class="space-y-4">
-        <div>
-          <label class="block text-xs font-medium text-slate-400 mb-1" id="auth-label-input">Senha de Acesso</label>
-          <input type="password" id="auth-password" required placeholder="••••••••"
-                 class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 text-sm focus:outline-none focus:border-emerald-500">
-        </div>
-        <button type="submit" id="auth-submit-btn" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-2.5 rounded-xl transition text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-900/20">
-          <i class="fa-solid fa-right-to-bracket"></i> Desbloquear Sistema
-        </button>
-      </form>
-
-      <div class="text-center pt-2 border-t border-slate-800 flex justify-between items-center text-xs">
-        <button id="toggle-auth-mode" type="button" class="text-emerald-400 hover:underline">
-          Definir nova senha / Resetar
-        </button>
-        <span class="text-slate-500">•</span>
-        <button id="clear-all-btn" type="button" class="text-rose-400 hover:underline">
-          Apagar dados e reiniciar
-        </button>
-      </div>
-    </div>
+<div class="container">
+  <div class="header-bar">
+    <h1>
+      Painel Integrado de Gestão
+      <span class="sync-status">🟢 Nuvem Sincronizada</span>
+    </h1>
   </div>
 
-  <!-- Header Protegido -->
-  <header class="bg-slate-900 border-b border-slate-800 sticky top-0 z-40">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-      <div class="flex items-center gap-3">
-        <div class="p-2.5 bg-emerald-500/10 rounded-xl border border-emerald-500/20 text-emerald-400">
-          <i class="fa-solid fa-chart-line text-xl"></i>
-        </div>
-        <div>
-          <h1 class="text-xl font-bold bg-gradient-to-r from-emerald-400 to-teal-200 bg-clip-text text-transparent">
-            Gestão & Planejamento Financeiro
-          </h1>
-          <p class="text-xs text-emerald-400">Sistema Seguro Ativo</p>
-        </div>
-      </div>
-      
-      <div class="flex items-center gap-3">
-        <div class="hidden sm:flex items-center gap-2 text-xs text-slate-300 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700/50">
-          <i class="fa-solid fa-user-shield text-emerald-400"></i>
-          <span>Sessão Protegida</span>
-        </div>
-        <button id="lock-btn" class="bg-slate-800 hover:bg-rose-500/20 text-slate-300 hover:text-rose-400 px-3 py-1.5 rounded-lg border border-slate-700/50 text-xs transition flex items-center gap-1.5" title="Bloquear Sistema">
-          <i class="fa-solid fa-lock"></i> Bloquear
-        </button>
-      </div>
-    </div>
-  </header>
+  <!-- NAVEGAÇÃO ENTRE ABAS -->
+  <div class="nav-tabs">
+    <button class="tab-btn active" onclick="switchTab('tabPainel', this)">📊 Gestão & Frota</button>
+    <button class="tab-btn" onclick="switchTab('tabMotoristas', this)">👨‍✈️ Cadastrar Motorista x Placa</button>
+    <button class="tab-btn" onclick="switchTab('tabAgenda', this)">📅 Agenda de Tarefas & Lembretes</button>
+    <button class="tab-btn" onclick="switchTab('tabImportacao', this)">📁 Importar Planilha / Entregas</button>
+  </div>
 
-  <!-- Conteúdo Principal -->
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 space-y-8 w-full">
-
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-      <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800">
-        <p class="text-xs font-medium text-slate-400 uppercase">Renda Total Bruta</p>
-        <h3 class="text-2xl font-extrabold text-emerald-400 mt-1" id="kpi-income">R$ 0,00</h3>
-        <p class="text-[11px] text-slate-500 mt-1">Salário + VR + VA + Prêmios</p>
-      </div>
-      <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800">
-        <p class="text-xs font-medium text-slate-400 uppercase">Contas Fixas (Luz/Água...)</p>
-        <h3 class="text-2xl font-extrabold text-rose-400 mt-1" id="kpi-expenses">R$ 0,00</h3>
-        <p class="text-[11px] text-slate-500 mt-1" id="kpi-expenses-ratio">0% da renda</p>
-      </div>
-      <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800">
-        <p class="text-xs font-medium text-slate-400 uppercase">Gastos Variáveis (Mercado/Gasolina)</p>
-        <h3 class="text-2xl font-extrabold text-orange-400 mt-1" id="kpi-daily-expenses">R$ 0,00</h3>
-        <p class="text-[11px] text-slate-500 mt-1" id="kpi-daily-count">0 lançamentos</p>
-      </div>
-      <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800">
-        <p class="text-xs font-medium text-slate-400 uppercase">Saldo Livre Restante</p>
-        <h3 class="text-2xl font-extrabold text-amber-400 mt-1" id="kpi-free-budget">R$ 0,00</h3>
-        <p class="text-[11px] text-slate-500 mt-1">Disponível para Lazer / Sobras</p>
+  <!-- ABA 1: OPERACIONAL E FROTA -->
+  <div id="tabPainel" class="tab-content active">
+    <!-- INDICADORES DA FROTA -->
+    <div class="card">
+      <h2>📊 Status Geral da Frota</h2>
+      <div class="summary-box">
+        <div class="kpi-card kpi-success">
+          <h4>Veículos Disponíveis</h4>
+          <p id="kpiDisponiveis">0 veículos</p>
+        </div>
+        <div class="kpi-card kpi-warning">
+          <h4>Veículos Indisponíveis (Parados)</h4>
+          <p id="kpiIndisponiveis">0 veículos</p>
+        </div>
+        <div class="kpi-card">
+          <h4>Total na Frota</h4>
+          <p id="kpiTotalFrota">0 veículos</p>
+        </div>
       </div>
     </div>
 
-    <div id="budget-health-alert" class="hidden p-4 rounded-xl border flex items-start gap-3">
-      <i id="budget-health-icon" class="text-xl mt-0.5"></i>
-      <div>
-        <h4 id="budget-health-title" class="font-bold text-sm"></h4>
-        <p id="budget-health-msg" class="text-xs mt-1 text-slate-300"></p>
+    <!-- 1. CADASTRO DE VEÍCULOS -->
+    <div class="card">
+      <h2 id="titleVeiculo">1. Cadastro e Controle de Frota (Disponibilidade & Dias Parado)</h2>
+      <form id="cadastroVeiculoForm">
+        <input type="hidden" id="editVeiculoKey">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Modelo / Descrição do Veículo</label>
+            <input type="text" id="vModelo" placeholder="Ex: VW Delivery 9.170" required>
+          </div>
+          <div class="form-group">
+            <label>Placa do Veículo</label>
+            <input type="text" id="vPlaca" placeholder="Ex: ABC-1234" required>
+          </div>
+          <div class="form-group">
+            <label>Status Atual</label>
+            <select id="vStatus">
+              <option value="Disponível">Disponível</option>
+              <option value="Indisponível">Indisponível (Parado)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Data de Início do Status</label>
+            <input type="date" id="vDataStatus">
+          </div>
+          <div class="form-group">
+            <label>Observação / Motivo (Opcional)</label>
+            <input type="text" id="vObs" placeholder="Ex: Em manutenção / Aguardando peça">
+          </div>
+        </div>
+        <button type="button" id="btnSalvarVeiculo" onclick="cadastrarVeiculo()">Cadastrar Veículo</button>
+        <button type="button" id="btnCancelVeiculo" class="btn-cancel" onclick="cancelarEdicaoVeiculo()" style="display:none;">Cancelar Edição</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Lista de Veículos da Frota</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Modelo</th>
+            <th>Placa</th>
+            <th>Status</th>
+            <th>Desde</th>
+            <th>Dias Parado</th>
+            <th>Dias Disponível</th>
+            <th>Observação</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tbVeiculosCadastrados">
+          <tr><td colspan="8" style="text-align:center; color:#777;">Carregando frota...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 2. GESTÃO FINANCEIRA COM PLACA, FORNECEDOR E NOTAS SEPARADAS -->
+    <div class="card">
+      <h2 id="titleFinanceiro">2. Lançamento Financeiro & Controle de Notas (Placa / Fornecedor / Peças / Serviços)</h2>
+      <form id="financeForm">
+        <input type="hidden" id="editFinanceiroKey">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Setor / Origem</label>
+            <select id="finSetor" required>
+              <option value="Transporte">Transporte</option>
+              <option value="CDR">CDR</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Placa do Veículo</label>
+            <input type="text" id="finPlaca" placeholder="Ex: ABC-1234 (Opcional)">
+          </div>
+          <div class="form-group">
+            <label>Nome do Fornecedor / Oficina</label>
+            <input type="text" id="finFornecedor" placeholder="Ex: Auto Peças Araraquara" required>
+          </div>
+          <div class="form-group">
+            <label>Nº Nota Peças (Opcional)</label>
+            <input type="text" id="numNotaPecas" placeholder="Ex: NF-123 (Peças)">
+          </div>
+          <div class="form-group">
+            <label>Valor Peças (R$)</label>
+            <input type="text" id="valorPecas" placeholder="Ex: 500,00">
+          </div>
+          <div class="form-group">
+            <label>Nº Nota Serviço (Opcional)</label>
+            <input type="text" id="numNotaServico" placeholder="Ex: NFS-456 (Mão de Obra)">
+          </div>
+          <div class="form-group">
+            <label>Valor Serviço (R$)</label>
+            <input type="text" id="valorServico" placeholder="Ex: 300,00">
+          </div>
+          <div class="form-group">
+            <label>Data de Emissão</label>
+            <input type="date" id="dataEmissao" required>
+          </div>
+          <div class="form-group">
+            <label>Forma de Pagamento</label>
+            <select id="formaPagamento" onchange="toggleFormaPagamento()">
+              <option value="Boleto">Boleto Bancário</option>
+              <option value="PIX">PIX</option>
+              <option value="Cartão/Outro">Cartão / Outro</option>
+            </select>
+          </div>
+          <div class="form-group" id="groupDataPagamento">
+            <label id="lblDataPagamento">Data Vencimento</label>
+            <input type="date" id="dataVencimento" required>
+          </div>
+          <div class="form-group">
+            <label>Status do Pagamento</label>
+            <select id="finStatus">
+              <option value="Pendente">🟡 Pendente (A Pagar)</option>
+              <option value="Pago">🟢 Pago (Concluído)</option>
+            </select>
+          </div>
+        </div>
+        <button type="button" id="btnSalvarFinanceiro" onclick="addFinanceiro()">Salvar Lançamento</button>
+        <button type="button" id="btnCancelFinanceiro" class="btn-cancel" onclick="cancelarEdicaoFinanceiro()" style="display:none;">Cancelar Edição</button>
+      </form>
+    </div>
+
+    <!-- TOTAIS FINANCEIROS DO MÊS -->
+    <div class="card">
+      <div class="card-header-flex">
+        <h2>💰 Totais Financeiros Gastos no Mês</h2>
+        <div class="form-group" style="max-width:200px; margin-bottom:0;">
+          <input type="month" id="filtroMesFinanceiro" onchange="calcularTotaisFinanceiros()">
+        </div>
+      </div>
+      <div class="summary-box">
+        <div class="kpi-card kpi-success">
+          <h4>Total Mês (Geral)</h4>
+          <p id="kpiTotalFinanceiroMes">R$ 0,00</p>
+        </div>
+        <div class="kpi-card">
+          <h4>Gasto em TRANSPORTE</h4>
+          <p id="kpiTotalTransporteMes">R$ 0,00</p>
+        </div>
+        <div class="kpi-card kpi-purple">
+          <h4>Gasto em CDR</h4>
+          <p id="kpiTotalCDRMes">R$ 0,00</p>
+        </div>
       </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      
-      <!-- Coluna 1 -->
-      <div class="space-y-6">
-        <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800 space-y-4">
-          <h2 class="text-lg font-bold text-emerald-400 flex items-center gap-2">
-            <i class="fa-solid fa-money-bill-wave"></i> 1. Rendas e Benefícios
-          </h2>
-          <form id="income-form" class="space-y-3">
-            <div>
-              <label class="block text-xs text-slate-400 mb-1">Salário Líquido (R$)</label>
-              <input type="number" id="income-salary" step="0.01" placeholder="0.00"
-                     class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 text-sm focus:outline-none focus:border-emerald-500">
-            </div>
-            <div class="grid grid-cols-2 gap-2">
-              <div>
-                <label class="block text-xs text-slate-400 mb-1">Vale Alimentação (VA)</label>
-                <input type="number" id="income-va" step="0.01" placeholder="0.00"
-                       class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 text-sm focus:outline-none focus:border-emerald-500">
-              </div>
-              <div>
-                <label class="block text-xs text-slate-400 mb-1">Vale Refeição (VR)</label>
-                <input type="number" id="income-vr" step="0.01" placeholder="0.00"
-                       class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 text-sm focus:outline-none focus:border-emerald-500">
-              </div>
-            </div>
-            <div>
-              <label class="block text-xs text-slate-400 mb-1">Premiações / Bônus Extra (R$)</label>
-              <input type="number" id="income-bonus" step="0.01" placeholder="0.00"
-                     class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 text-sm focus:outline-none focus:border-emerald-500">
-            </div>
-            <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-2.5 rounded-xl transition text-sm">
-              Atualizar Renda Total
-            </button>
-          </form>
-        </div>
+    <div class="card">
+      <h2>Controle de Contas, Boletos e Notas por Placa e Fornecedor</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Setor</th>
+            <th>Placa</th>
+            <th>Fornecedor</th>
+            <th>Nota Peças / Valor</th>
+            <th>Nota Serviço / Valor</th>
+            <th>Valor Total</th>
+            <th>Emissão</th>
+            <th>Vencimento</th>
+            <th>Status</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tbFinanceiro">
+          <tr><td colspan="10" style="text-align:center; color:#777;">Carregando dados...</td></tr>
+        </tbody>
+      </table>
+    </div>
 
-        <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800 space-y-4">
-          <h2 class="text-lg font-bold text-orange-400 flex items-center gap-2">
-            <i class="fa-solid fa-basket-shopping"></i> 2. Mercado, Gasolina e Compras
-          </h2>
-          <form id="daily-expense-form" class="space-y-3">
-            <input type="text" id="daily-expense-desc" placeholder="Ex: Supermercado, Posto Shell, Peça" required 
-                   class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 text-sm focus:outline-none focus:border-orange-500">
-            
-            <div class="grid grid-cols-2 gap-3">
-              <input type="number" id="daily-expense-amount"
+    <!-- 3. SAÍDAS E VIAGENS COM DESTAQUE DE SAÍDAS < 15 EM VERMELHO -->
+    <div class="card">
+      <div class="card-header-flex">
+        <h2>🚚 Totais de Saídas por Motorista (&lt; 15 Saídas em Vermelho)</h2>
+        <div class="form-group" style="max-width:200px; margin-bottom:0;">
+          <label style="font-size:11px;">Mês Referência</label>
+          <input type="month" id="filtroMesSaidas" onchange="renderizarResumoSaidasPlanilha()">
+        </div>
+      </div>
+      <div id="driverSummary" class="driver-list">
+        <p style="color:#777;">Importe uma planilha na aba "Importar Planilha / Entregas" para carregar as saídas automaticamente.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header-flex">
+        <h2>📊 Relatório Consolidado de Saídas por Veículo</h2>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Veículo / Placa</th>
+            <th>Total de Saídas no Mês</th>
+            <th>Motorista Vinculado</th>
+            <th>Tipologia</th>
+            <th>Vínculo</th>
+          </tr>
+        </thead>
+        <tbody id="tbViagens">
+          <tr><td colspan="5" style="text-align:center; color:#777;">Aguardando importação de planilha...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 4. MANUTENÇÃO -->
+    <div class="card">
+      <h2 id="titleManutencao">4. Registro de Manutenção Realizada</h2>
+      <form id="manutencaoForm">
+        <input type="hidden" id="editManutencaoKey">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Veículo / Placa</label>
+            <input type="text" id="mVeiculo" placeholder="Ex: VW Delivery (ABC-1234)" required>
+          </div>
+          <div class="form-group">
+            <label>Data da Realização</label>
+            <input type="date" id="mDataRealizada" required>
+          </div>
+          <div class="form-group">
+            <label>Tipo de Serviço</label>
+            <select id="mServico">
+              <option value="Troca de Óleo e Filtros">Troca de Óleo e Filtros</option>
+              <option value="Sistema de Freios">Sistema de Freios</option>
+              <option value="Pneus e Alinhamento">Pneus e Alinhamento</option>
+              <option value="Correias e Motores">Correias e Motores</option>
+              <option value="Suspensão e Amortecedores">Suspensão</option>
+              <option value="Elétrica e Bateria">Elétrica e Bateria</option>
+              <option value="Revisão Geral">Revisão Geral</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Peças Trocadas</label>
+            <input type="text" id="mPeças" placeholder="Ex: Filtro de óleo" required>
+          </div>
+          <div class="form-group">
+            <label>Custo Total (R$)</label>
+            <input type="text" id="mCusto" placeholder="Ex: 1960 ou 1.960,00" required>
+          </div>
+          <div class="form-group">
+            <label>KM Atual</label>
+            <input type="number" id="mKmAtual" required>
+          </div>
+          <div class="form-group">
+            <label>KM Próxima Revisão</label>
+            <input type="number" id="mKmProxima" required>
+          </div>
+          <div class="form-group">
+            <label>Data Próxima Revisão</label>
+            <input type="date" id="mDataProxima" required>
+          </div>
+        </div>
+        <button type="button" id="btnSalvarManutencao" onclick="addManutencao()">Registrar Manutenção</button>
+        <button type="button" id="btnCancelManutencao" class="btn-cancel" onclick="cancelarEdicaoManutencao()" style="display:none;">Cancelar Edição</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Histórico de Manutenções</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Veículo</th>
+            <th>Serviço / Peças</th>
+            <th>Custo (R$)</th>
+            <th>Realizado Em</th>
+            <th>KM Na Troca</th>
+            <th>Próxima Revisão</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tbManutencao">
+          <tr><td colspan="7" style="text-align:center; color:#777;">Carregando manutenções...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 5. ESTOQUE DE PEÇAS -->
+    <div class="card">
+      <h2 id="titleEstoque">5. Controle de Estoque de Peças</h2>
+      <form id="estoqueForm">
+        <input type="hidden" id="editEstoqueKey">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Nome da Peça</label>
+            <input type="text" id="pNome" placeholder="Ex: Pastilha de Freio" required>
+          </div>
+          <div class="form-group">
+            <label>Código / Aplicação</label>
+            <input type="text" id="pCodigo" placeholder="Ex: Iveco Daily">
+          </div>
+          <div class="form-group">
+            <label>Qtd Atual</label>
+            <input type="number" id="pQtd" required>
+          </div>
+          <div class="form-group">
+            <label>Qtd Mínima</label>
+            <input type="number" id="pQtdMin" required>
+          </div>
+          <div class="form-group">
+            <label>Localização</label>
+            <input type="text" id="pLocal" placeholder="Ex: Prateleira B2">
+          </div>
+        </div>
+        <button type="button" id="btnSalvarEstoque" onclick="addEstoque()">Salvar no Estoque</button>
+        <button type="button" id="btnCancelEstoque" class="btn-cancel" onclick="cancelarEdicaoEstoque()" style="display:none;">Cancelar Edição</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Inventário de Peças</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Peça</th>
+            <th>Código</th>
+            <th>Qtd. Estoque</th>
+            <th>Local</th>
+            <th>Status</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tbEstoque">
+          <tr><td colspan="6" style="text-align:center; color:#777;">Carregando estoque...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 6. RODÍZIO E FREIOS -->
+    <div class="card">
+      <h2 id="titlePneusFreios">6. Rodízio de Pneus & Pastilhas</h2>
+      <form id="pneusFreiosForm">
+        <input type="hidden" id="editPneusKey">
+        <div class="
